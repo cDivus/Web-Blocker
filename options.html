@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Web Blocker — Settings</title>
+  <link rel="stylesheet" href="options.css" />
+</head>
+<body>
+
+  <div class="layout">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">Web Blocker</div>
+      <nav class="sidebar-nav">
+        <button class="nav-btn active" data-section="blocklist">Block List</button>
+        <button class="nav-btn" data-section="schedule">Schedule</button>
+        <button class="nav-btn" data-section="blockpage">Block Page</button>
+        <button class="nav-btn" data-section="danger">Danger Zone</button>
+      </nav>
+    </aside>
+
+    <!-- Main -->
+    <main class="main">
+
+      <!-- ===== BLOCK LIST ===== -->
+      <section class="section active" id="section-blocklist">
+        <h2 class="section-title">Block List</h2>
+        <p class="section-desc">Select a mode to activate blocking. Only one mode can be active at a time.</p>
+
+        <!-- Modes header -->
+        <div class="modes-header">
+          <span class="field-label" style="margin:0; border:none;">Modes</span>
+          <button class="btn btn-sm" id="btn-new-mode">New Mode</button>
+        </div>
+
+        <!-- Mode cards -->
+        <div class="modes-grid" id="modes-grid"></div>
+
+        <!-- New mode inline form -->
+        <div class="new-mode-form" id="new-mode-form" style="display:none;">
+          <input type="text" id="new-mode-name" placeholder="Mode name (e.g. Study, Work)" />
+          <button class="btn btn-sm" id="btn-create-mode">Create</button>
+          <button class="btn btn-sm" id="btn-cancel-mode">Cancel</button>
+        </div>
+
+        <!-- Mode editor -->
+        <div class="mode-editor" id="mode-editor" style="display:none;">
+          <div class="mode-editor-header">
+            <div class="mode-editor-title-container">
+              <span class="mode-editor-name" id="mode-editor-name"></span>
+              <input type="text" id="mode-editor-name-input" class="mode-editor-name-input" style="display:none;" />
+              <button class="btn-icon" id="btn-rename-mode" title="Rename Mode">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+              </button>
+            </div>
+            <div class="mode-editor-btns">
+              <button class="btn btn-sm btn-danger" id="btn-delete-mode">Delete</button>
+            </div>
+          </div>
+
+          <div class="field-label" style="margin-top:0;">Blocked Sites</div>
+          <p class="mode-textarea-hint">One entry per line. Domains (e.g. <strong>youtube.com</strong>) block exact matches and subdomains. Keywords without a dot (e.g. <strong>wiki</strong>) block any hostname containing that word.</p>
+          <textarea id="mode-domains-textarea" rows="12" placeholder="facebook.com&#10;youtube.com&#10;tiktok.com"></textarea>
+          <button class="btn" id="btn-save-mode-domains">Save</button>
+          <button class="btn" id="btn-cancel-mode-domains" style="margin-left: 8px;">Cancel</button>
+        </div>
+      </section>
+
+
+      <!-- ===== SCHEDULE ===== -->
+      <section class="section" id="section-schedule">
+        <h2 class="section-title">Schedule</h2>
+        <p class="section-desc">Automatically enable blocking on specific days and times.</p>
+
+        <div class="field-row">
+          <span class="field-label" style="margin:0;">Enable Schedule</span>
+          <label class="switch">
+            <input type="checkbox" id="schedule-enabled" />
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="field-label">Active Days</div>
+        <div class="day-grid">
+          <label class="day-btn"><input type="checkbox" value="0" /> Sunday</label>
+          <label class="day-btn"><input type="checkbox" value="1" checked /> Monday</label>
+          <label class="day-btn"><input type="checkbox" value="2" checked /> Tuesday</label>
+          <label class="day-btn"><input type="checkbox" value="3" checked /> Wednesday</label>
+          <label class="day-btn"><input type="checkbox" value="4" checked /> Thursday</label>
+          <label class="day-btn"><input type="checkbox" value="5" checked /> Friday</label>
+          <label class="day-btn"><input type="checkbox" value="6" /> Saturday</label>
+        </div>
+
+        <div class="field-label">Time Range</div>
+        <div class="time-row">
+          <div class="time-field">
+            <label class="sub-label">From</label>
+            <input type="time" id="sched-start" value="08:00" />
+          </div>
+          <div class="time-sep">—</div>
+          <div class="time-field">
+            <label class="sub-label">To</label>
+            <input type="time" id="sched-end" value="17:00" />
+          </div>
+        </div>
+
+
+      </section>
+
+      <!-- ===== BLOCK PAGE ===== -->
+      <section class="section" id="section-blockpage">
+        <h2 class="section-title">Block Page</h2>
+        <p class="section-desc">Customize the message shown when a blocked site is visited.</p>
+
+        <div class="field-label">Message</div>
+        <textarea id="block-page-content" rows="4" placeholder="You blocked this site for a reason."></textarea>
+
+        <div class="field-label" style="margin-top:16px;">Preview</div>
+        <div class="preview-box" id="preview-box">You blocked this site for a reason.</div>
+
+        <button class="btn" id="btn-save-blockpage">Save</button>
+        <div class="save-msg" id="blockpage-saved" style="display:none;">Saved.</div>
+      </section>
+
+      <!-- ===== DANGER ZONE ===== -->
+      <section class="section" id="section-danger">
+        <h2 class="section-title">Danger Zone</h2>
+        <p class="section-desc">These actions are permanent and cannot be undone.</p>
+
+        <div class="danger-card">
+          <div class="danger-card-body">
+            <div class="danger-item-title">Clear Block List</div>
+            <div class="danger-item-desc">Remove all blocked sites from storage.</div>
+          </div>
+          <button class="btn btn-danger" id="btn-clear-all">Clear All</button>
+        </div>
+
+        <div class="danger-card">
+          <div class="danger-card-body">
+            <div class="danger-item-title">Reset All Settings</div>
+            <div class="danger-item-desc">Restore everything to factory defaults.</div>
+          </div>
+          <button class="btn btn-danger" id="btn-reset-all">Reset</button>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

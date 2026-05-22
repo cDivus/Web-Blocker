@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Web Blocker</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="container">
+
+    <div class="header">
+      <h1>Web Blocker</h1>
+    </div>
+
+    <div class="body">
+
+      <!-- Block current site -->
+      <button class="btn full-width" id="btn-block-current">Block This Site</button>
+
+      <!-- Blocked count -->
+      <div class="count-row">
+        <span id="blocked-count">0 sites blocked</span>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Open settings -->
+      <button class="btn full-width" id="btn-settings">Open Settings</button>
+
+    </div>
+
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
