@@ -15,9 +15,7 @@
     "<all_urls>"
   ],
   "background": {
-    "scripts": [
-      "background.js"
-    ]
+    "service_worker": "background.js"
   },
   "options_ui": {
     "page": "src/options/options.html",
@@ -45,11 +43,5 @@
   ],
   "icons": {
     "128": "icons/icon128.png"
-  },
-  "browser_specific_settings": {
-    "gecko": {
-      "id": "web-blocker@snraw",
-      "strict_min_version": "109.0"
-    }
   }
 }
