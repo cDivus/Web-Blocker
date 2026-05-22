@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Web Blocker",
   "version": "1.0.0",
-  "description": "A simple, powerful website blocker with focus timer, scheduling, and temporary unblock features.",
+  "description": "A simple, powerful website blocker with mode-based blocking, scheduling, and temporary unblock features.",
   "permissions": [
     "storage",
     "tabs",
@@ -17,11 +17,11 @@
     "service_worker": "background.js"
   },
   "options_ui": {
-    "page": "options.html",
+    "page": "src/options/options.html",
     "open_in_tab": true
   },
   "action": {
-    "default_popup": "popup.html",
+    "default_popup": "src/popup/popup.html",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
@@ -30,7 +30,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["blocked.html", "blocked.js", "blocked.css"],
+      "resources": ["src/blocked/blocked.html", "src/blocked/blocked.js", "src/blocked/blocked.css"],
       "matches": ["<all_urls>"]
     }
   ],

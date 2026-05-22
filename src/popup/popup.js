@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Open settings
   document.getElementById('btn-settings').addEventListener('click', () => {
-    chrome.tabs.create({ url: chrome.runtime.getURL('options.html') });
+    chrome.tabs.create({ url: chrome.runtime.getURL('src/options/options.html') });
   });
 });
 

@@ -75,7 +75,7 @@ chrome.webNavigation.onBeforeNavigate.addListener(async ({ tabId, frameId, url }
   if (frameId !== 0) return;
   if (!url || /^(chrome|chrome-extension|about):/.test(url)) return;
   if (await shouldBlock(url)) {
-    chrome.tabs.update(tabId, { url: chrome.runtime.getURL('blocked.html') + '?blocked=' + encodeURIComponent(url) });
+    chrome.tabs.update(tabId, { url: chrome.runtime.getURL('src/blocked/blocked.html') + '?blocked=' + encodeURIComponent(url) });
   }
 });
 
