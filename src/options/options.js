@@ -1,6 +1,8 @@
 // ===== HELPERS =====
-function normalizeEntry(input) {
-  const trimmed = input.trim().toLowerCase();
+
+// Normalize a raw domain/keyword string (no timer part)
+function normalizeDomain(raw) {
+  const trimmed = raw.trim().toLowerCase();
   if (!trimmed) return '';
   if (!trimmed.includes('.')) return trimmed; // keyword
   try {
@@ -11,6 +13,47 @@ function normalizeEntry(input) {
     return trimmed.replace(/^www\./, '');
   }
 }
+
+/**
+ * Parse a single textarea line into { domain, limitMinutes } or null on error.
+ * Valid formats:
+ *   "facebook.com"          → { domain: 'facebook.com', limitMinutes: null }
+ *   "facebook.com; 15"      → { domain: 'facebook.com', limitMinutes: 15 }
+ * Returns null for malformed lines.
+ */
+function parseLine(line) {
+  const trimmed = line.trim();
+  if (!trimmed) return null; // blank — skip, not an error
+
+  const parts = trimmed.split(';');
+  if (parts.length > 2) return { error: `Too many semicolons: "${trimmed}"` };
+
+  const domain = normalizeDomain(parts[0]);
+  if (!domain) return { error: `Invalid domain: "${parts[0].trim()}"` };
+
+  if (parts.length === 1) {
+    return { domain, limitMinutes: null };
+  }
+
+  const minStr = parts[1].trim();
+  if (minStr === '') return { error: `Missing minutes after semicolon: "${trimmed}"` };
+  const mins = Number(minStr);
+  if (!Number.isInteger(mins) || mins <= 0) {
+    return { error: `Minutes must be a positive integer, got: "${minStr}"` };
+  }
+  return { domain, limitMinutes: mins };
+}
+
+/**
+ * Serialize an array of { domain, limitMinutes } entries back into textarea text.
+ */
+function serializeEntries(entries) {
+  return (entries || []).map(e => {
+    if (e.limitMinutes != null) return `${e.domain}; ${e.limitMinutes}`;
+    return e.domain;
+  }).join('\n');
+}
+
 
 function sendMsg(action, data = {}) {
   return new Promise(resolve => chrome.runtime.sendMessage({ action, ...data }, resolve));
@@ -27,6 +70,7 @@ function showSaveMsg(id) {
 // ===== STATE =====
 let state = {};
 let selectedModeId = null;
+let analyticsInterval = null;
 
 // ===== INIT =====
 document.addEventListener('DOMContentLoaded', async () => {
@@ -36,6 +80,25 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderSchedule();
   renderBlockPage();
   setupListeners();
+  renderAnalytics();
+  
+  // Visibility change logic to stop/start polling
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      if (analyticsInterval) {
+        clearInterval(analyticsInterval);
+        analyticsInterval = null;
+      }
+    } else {
+      const activeBtn = document.querySelector('.nav-btn.active');
+      if (activeBtn && activeBtn.dataset.section === 'analytics') {
+        renderAnalytics();
+        if (!analyticsInterval) {
+          analyticsInterval = setInterval(renderAnalytics, 1000);
+        }
+      }
+    }
+  });
 });
 
 // ===== NAVIGATION =====
@@ -46,6 +109,16 @@ function setupNav() {
       document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
       btn.classList.add('active');
       document.getElementById('section-' + btn.dataset.section).classList.add('active');
+      
+      if (analyticsInterval) {
+        clearInterval(analyticsInterval);
+        analyticsInterval = null;
+      }
+      
+      if (btn.dataset.section === 'analytics') {
+        renderAnalytics();
+        analyticsInterval = setInterval(renderAnalytics, 1000);
+      }
     });
   });
 }
@@ -68,8 +141,10 @@ function renderModes() {
 
     const count = document.createElement('div');
     count.className = 'mode-card-count';
-    const n = (mode.domains || []).length;
-    count.textContent = `${n} site${n !== 1 ? 's' : ''}`;
+    const entries = mode.domains || [];
+    const n = entries.length;
+    const t = entries.filter(e => e && e.limitMinutes != null).length;
+    count.textContent = `${n} site${n !== 1 ? 's' : ''}${t > 0 ? ` · ${t} timed` : ''}`;
 
     card.appendChild(name);
     card.appendChild(count);
@@ -110,8 +185,11 @@ function renderModeEditor() {
   document.getElementById('mode-editor-name').style.display = '';
   document.getElementById('mode-editor-name-input').style.display = 'none';
   document.getElementById('btn-rename-mode').innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>';
-  // Populate textarea — one domain per line
-  document.getElementById('mode-domains-textarea').value = (mode.domains || []).join('\n');
+  // Populate textarea — one entry per line in "domain" or "domain; minutes" format
+  document.getElementById('mode-domains-textarea').value = serializeEntries(mode.domains);
+  // Clear any previous error
+  const errEl = document.getElementById('textarea-error');
+  if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
 }
 
 
@@ -220,8 +298,10 @@ function setupListeners() {
   document.getElementById('btn-cancel-mode-domains').addEventListener('click', () => {
     const mode = (state.modes || []).find(m => m.id === selectedModeId);
     if (mode) {
-      document.getElementById('mode-domains-textarea').value = (mode.domains || []).join('\n');
+      document.getElementById('mode-domains-textarea').value = serializeEntries(mode.domains);
     }
+    const errEl = document.getElementById('textarea-error');
+    if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
     document.getElementById('mode-editor').style.display = 'none';
     selectedModeId = null;
   });
@@ -256,14 +336,26 @@ function setupListeners() {
       enabled: true,
       modes: [{
         id: 'builtin-social', name: 'Focus', builtin: true,
-        domains: ['facebook.com','instagram.com','twitter.com','x.com','tiktok.com',
-          'reddit.com','youtube.com','snapchat.com','pinterest.com',
-          'linkedin.com','tumblr.com','twitch.tv','discord.com']
+        domains: [
+          { domain: 'facebook.com',  limitMinutes: null },
+          { domain: 'instagram.com', limitMinutes: null },
+          { domain: 'twitter.com',   limitMinutes: null },
+          { domain: 'x.com',         limitMinutes: null },
+          { domain: 'tiktok.com',    limitMinutes: null },
+          { domain: 'reddit.com',    limitMinutes: null },
+          { domain: 'youtube.com',   limitMinutes: null },
+          { domain: 'snapchat.com',  limitMinutes: null },
+          { domain: 'pinterest.com', limitMinutes: null },
+          { domain: 'linkedin.com',  limitMinutes: null },
+          { domain: 'tumblr.com',    limitMinutes: null },
+          { domain: 'twitch.tv',     limitMinutes: null },
+          { domain: 'discord.com',   limitMinutes: null }
+        ]
       }],
       activeModeId: null,
       scheduleEnabled: false,
       schedule: { days: [1,2,3,4,5], startTime: '08:00', endTime: '17:00' },
-      focusActive: false, focusEndTime: 0, tempUnblocks: {}
+      tempUnblocks: {}, siteTimers: {}
     });
     state = await sendMsg('getState');
     selectedModeId = null;
@@ -294,18 +386,45 @@ async function saveModeDomainsFromTextarea() {
   if (!selectedModeId) return;
 
   const raw = document.getElementById('mode-domains-textarea').value;
-  // Parse: split by newlines, normalize each, deduplicate, drop empties
-  const domains = [...new Set(
-    raw.split('\n')
-      .map(line => normalizeEntry(line))
-      .filter(d => d.length > 0)
-  )];
+  const lines = raw.split('\n');
+  const errEl = document.getElementById('textarea-error');
+
+  const entries = [];
+  const seen = new Set();
+  const errors = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line.trim()) continue; // skip blank lines
+
+    const result = parseLine(line);
+    if (!result) continue; // blank
+    if (result.error) {
+      errors.push(`Line ${i + 1}: ${result.error}`);
+      continue;
+    }
+
+    // Deduplicate by domain
+    if (!seen.has(result.domain)) {
+      seen.add(result.domain);
+      entries.push(result);
+    }
+  }
+
+  if (errors.length > 0) {
+    errEl.textContent = errors.join(' · ');
+    errEl.style.display = 'block';
+    return; // Block saving
+  }
+
+  errEl.style.display = 'none';
+  errEl.textContent = '';
 
   // Send the full updated list to background
-  const res = await sendMsg('setModeDomains', { modeId: selectedModeId, domains });
+  const res = await sendMsg('setModeDomains', { modeId: selectedModeId, domains: entries });
   if (res && res.ok) {
     const idx = (state.modes || []).findIndex(m => m.id === selectedModeId);
-    if (idx !== -1) state.modes[idx].domains = domains;
+    if (idx !== -1) state.modes[idx].domains = entries;
     renderModes();
     // Hide the mode editor and clear selection
     document.getElementById('mode-editor').style.display = 'none';
@@ -327,3 +446,73 @@ async function saveSchedule() {
   state.scheduleEnabled = enabled;
 }
 
+// ===== ANALYTICS =====
+async function renderAnalytics() {
+  const container = document.getElementById('analytics-content');
+  if (!container) return;
+
+  // Re-fetch fresh state so timer data is current
+  const freshState = await sendMsg('getState');
+  const timerData  = await sendMsg('getTimers');
+  const siteTimers = (timerData && timerData.siteTimers) || {};
+
+  const activeModeId = freshState.activeModeId || null;
+  const activeMode = (freshState.modes || []).find(m => m.id === activeModeId);
+
+  // Only show entries that have a limitMinutes
+  const timedEntries = activeMode
+    ? (activeMode.domains || []).filter(e => e && e.limitMinutes != null)
+    : [];
+
+  if (!activeMode) {
+    container.innerHTML = `<p class="analytics-empty">No active mode selected. Activate a mode from the Block List tab to see timer data.</p>`;
+    return;
+  }
+
+  if (timedEntries.length === 0) {
+    container.innerHTML = `<p class="analytics-empty">No timed sites in the <strong>${activeMode.name}</strong> mode. Add entries in the format <code>domain; minutes</code> to track daily usage.</p>`;
+    return;
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  const rows = timedEntries.map(entry => {
+    const limitMs  = entry.limitMinutes * 60 * 1000;
+    const rec      = siteTimers[entry.domain];
+    const usedMs   = (rec && rec.date === today) ? (rec.usedMs || 0) : 0;
+    const remMs    = Math.max(0, limitMs - usedMs);
+    const pct      = Math.min(100, Math.round((usedMs / limitMs) * 100));
+
+    const fmt = ms => {
+      const totalSec = Math.floor(ms / 1000);
+      const h = Math.floor(totalSec / 3600);
+      const m = Math.floor((totalSec % 3600) / 60);
+      const s = totalSec % 60;
+      if (h > 0) return `${h}h ${m}m`;
+      if (m > 0) return `${m}m ${s}s`;
+      return `${s}s`;
+    };
+
+    const statusClass = pct >= 100 ? 'timer-bar-full' : pct >= 75 ? 'timer-bar-warn' : '';
+
+    return `
+      <div class="analytics-card">
+        <div class="analytics-card-header">
+          <span class="analytics-domain">${entry.domain}</span>
+          <span class="analytics-limit">${entry.limitMinutes} min / day</span>
+        </div>
+        <div class="analytics-bar-track">
+          <div class="analytics-bar-fill ${statusClass}" style="width:${pct}%"></div>
+        </div>
+        <div class="analytics-card-footer">
+          <span class="analytics-used">Used: ${fmt(usedMs)}</span>
+          <span class="analytics-remaining ${pct >= 100 ? 'analytics-exhausted' : ''}">${pct >= 100 ? 'Blocked' : fmt(remMs) + ' left'}</span>
+        </div>
+      </div>`;
+  });
+
+  container.innerHTML = `
+    <div class="analytics-mode-label">Active mode: <strong>${activeMode.name}</strong></div>
+    ${rows.join('')}
+  `;
+}

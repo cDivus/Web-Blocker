@@ -17,7 +17,8 @@
         <button class="nav-btn active" data-section="blocklist">Block List</button>
         <button class="nav-btn" data-section="schedule">Schedule</button>
         <button class="nav-btn" data-section="blockpage">Block Page</button>
-        <button class="nav-btn" data-section="danger">Danger Zone</button>
+        <button class="nav-btn" data-section="analytics">Analytics</button>
+        <button class="nav-btn" data-section="danger">Preferences</button>
       </nav>
     </aside>
 
@@ -61,8 +62,9 @@
           </div>
 
           <div class="field-label" style="margin-top:0;">Blocked Sites</div>
-          <p class="mode-textarea-hint">One entry per line. Domains (e.g. <strong>youtube.com</strong>) block exact matches and subdomains. Keywords (e.g. <strong>wiki</strong>) block any hostname containing that word.</p>
-          <textarea id="mode-domains-textarea" rows="12" placeholder="facebook.com&#10;youtube.com&#10;tiktok.com"></textarea>
+          <p class="mode-textarea-hint">One entry per line. Optionally set a daily time limit with <code>domain; minutes</code> (e.g. <strong>facebook.com; 15</strong> for 15 min/day). Domains block exact matches &amp; subdomains. Keywords (e.g. <strong>wiki</strong>) match any hostname containing that word.</p>
+          <textarea id="mode-domains-textarea" rows="12" placeholder="facebook.com; 15&#10;instagram.com; 30&#10;twitter.com"></textarea>
+          <div class="textarea-error" id="textarea-error" style="display:none;"></div>
           <button class="btn" id="btn-save-mode-domains">Save</button>
           <button class="btn" id="btn-cancel-mode-domains" style="margin-left: 8px;">Cancel</button>
         </div>
@@ -124,9 +126,16 @@
         <div class="save-msg" id="blockpage-saved" style="display:none;">Saved.</div>
       </section>
 
-      <!-- ===== DANGER ZONE ===== -->
+      <!-- ===== ANALYTICS ===== -->
+      <section class="section" id="section-analytics">
+        <h2 class="section-title">Analytics</h2>
+        <p class="section-desc">Daily time remaining for timed sites in the active mode. Resets at midnight.</p>
+        <div id="analytics-content"></div>
+      </section>
+
+      <!-- ===== PREFERENCES ===== -->
       <section class="section" id="section-danger">
-        <h2 class="section-title">Danger Zone</h2>
+        <h2 class="section-title">Preferences</h2>
         <p class="section-desc">These actions are permanent and cannot be undone.</p>
 
         <div class="danger-card">
