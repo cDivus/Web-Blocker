@@ -249,17 +249,6 @@ function setupListeners() {
   });
 
   // ---- DANGER ----
-  document.getElementById('btn-clear-all').addEventListener('click', async () => {
-    if (!confirm('Remove all modes and their blocked sites?')) return;
-    const builtins = (state.modes || []).filter(m => m.builtin).map(m => ({ ...m, domains: [] }));
-    await chrome.storage.local.set({ modes: builtins, activeModeId: null });
-    state.modes = builtins;
-    state.activeModeId = null;
-    selectedModeId = null;
-    renderModes();
-    document.getElementById('mode-editor').style.display = 'none';
-  });
-
   document.getElementById('btn-reset-all').addEventListener('click', async () => {
     if (!confirm('Reset all settings to defaults?')) return;
     await chrome.storage.local.clear();

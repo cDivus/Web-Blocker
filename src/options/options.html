@@ -61,7 +61,7 @@
           </div>
 
           <div class="field-label" style="margin-top:0;">Blocked Sites</div>
-          <p class="mode-textarea-hint">One entry per line. Domains (e.g. <strong>youtube.com</strong>) block exact matches and subdomains. Keywords without a dot (e.g. <strong>wiki</strong>) block any hostname containing that word.</p>
+          <p class="mode-textarea-hint">One entry per line. Domains (e.g. <strong>youtube.com</strong>) block exact matches and subdomains. Keywords (e.g. <strong>wiki</strong>) block any hostname containing that word.</p>
           <textarea id="mode-domains-textarea" rows="12" placeholder="facebook.com&#10;youtube.com&#10;tiktok.com"></textarea>
           <button class="btn" id="btn-save-mode-domains">Save</button>
           <button class="btn" id="btn-cancel-mode-domains" style="margin-left: 8px;">Cancel</button>
@@ -128,14 +128,6 @@
       <section class="section" id="section-danger">
         <h2 class="section-title">Danger Zone</h2>
         <p class="section-desc">These actions are permanent and cannot be undone.</p>
-
-        <div class="danger-card">
-          <div class="danger-card-body">
-            <div class="danger-item-title">Clear Block List</div>
-            <div class="danger-item-desc">Remove all blocked sites from storage.</div>
-          </div>
-          <button class="btn btn-danger" id="btn-clear-all">Clear All</button>
-        </div>
 
         <div class="danger-card">
           <div class="danger-card-body">
