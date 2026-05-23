@@ -1,12 +1,15 @@
 
 function normalizeDomain(input) {
+  const trimmed = input.trim().toLowerCase();
+  if (!trimmed) return '';
+  if (trimmed.includes(' ')) return ''; // Spaces are never allowed in domains or keywords!
+  if (!trimmed.includes('.')) return trimmed;
   try {
-    let url = input.trim();
-    if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://' + url;
-    const hostname = new URL(url).hostname.toLowerCase();
-    return hostname.replace(/^www\./, '');
+    let url = trimmed;
+    if (!url.startsWith('http')) url = 'https://' + url;
+    return new URL(url).hostname.replace(/^www\./, '');
   } catch {
-    return input.trim().toLowerCase().replace(/^www\./, '');
+    return trimmed.replace(/^www\./, '');
   }
 }
 
