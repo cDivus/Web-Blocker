@@ -409,7 +409,7 @@ chrome.runtime.onInstalled.addListener(async () => {
           { domain: 'snapchat.com',  limitMinutes: null },
           { domain: 'pinterest.com', limitMinutes: null },
           { domain: 'tumblr.com',    limitMinutes: null },
-          { domain: 'twitch.tv',     limitMinutes: null },
+          { domain: 'twitch.tv',     limitMinutes: null }
         ]
       }],
       activeModeId: null,

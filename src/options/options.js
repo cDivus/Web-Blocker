@@ -64,7 +64,13 @@ function serializeEntries(entries) {
 
 
 function sendMsg(action, data = {}) {
-  return new Promise(resolve => chrome.runtime.sendMessage({ action, ...data }, resolve));
+  return new Promise(resolve => {
+    chrome.runtime.sendMessage({ action, ...data }, response => {
+      // Accessing lastError silences potential uncaught context errors
+      const err = chrome.runtime.lastError;
+      resolve(response);
+    });
+  });
 }
 
 
@@ -286,7 +292,9 @@ function renderSchedule() {
 
   // Fallback to active mode or first mode if scheduleModeId is invalid or null
   if (!scheduleModeId || !modes.some(m => m.id === scheduleModeId)) {
-    scheduleModeId = state.activeModeId || modes[0].id;
+    scheduleModeId = (state.activeModeId && modes.some(m => m.id === state.activeModeId))
+      ? state.activeModeId
+      : modes[0].id;
   }
   select.value = scheduleModeId;
 
@@ -598,14 +606,13 @@ function setupListeners() {
           { domain: 'youtube.com',   limitMinutes: null },
           { domain: 'snapchat.com',  limitMinutes: null },
           { domain: 'pinterest.com', limitMinutes: null },
-          { domain: 'linkedin.com',  limitMinutes: null },
           { domain: 'tumblr.com',    limitMinutes: null },
-          { domain: 'twitch.tv',     limitMinutes: null },
-          { domain: 'discord.com',   limitMinutes: null }
+          { domain: 'twitch.tv',     limitMinutes: null }
         ]
       }],
       activeModeId: null,
       globalSchedule: {},
+      scheduleEnabled: false,
       tempUnblocks: {}, siteTimers: {}
     });
     state = await sendMsg('getState');
@@ -716,9 +723,9 @@ async function renderAnalytics() {
   if (!container) return;
 
   // Re-fetch fresh state so timer data is current
-  const freshState = await sendMsg('getState');
-  const timerData  = await sendMsg('getTimers');
-  const siteTimers = (timerData && timerData.siteTimers) || {};
+  const freshState = await sendMsg('getState') || {};
+  const timerData  = await sendMsg('getTimers') || {};
+  const siteTimers = timerData.siteTimers || {};
 
   const activeModeId = freshState.activeModeId || null;
   const activeMode = (freshState.modes || []).find(m => m.id === activeModeId);

@@ -82,11 +82,6 @@ h1 {
   body { background: #0a0a0a; color: #ffffff; }
   .header { background: #000000; border-bottom: 1px solid #ffffff; }
   .divider { border-top-color: #333333; }
-  .toggle-label { color: #ffffff; }
-  .slider { background: #333333; border-color: #ffffff; }
-  .slider::before { background: #ffffff; }
-  input:checked + .slider { background: #ffffff; }
-  input:checked + .slider::before { background: #000000; }
   .btn { background: #0a0a0a; color: #ffffff; border-color: #ffffff; }
   .btn:hover { background: #ffffff; color: #000000; }
   .btn:disabled:hover { background: #0a0a0a; color: #ffffff; }

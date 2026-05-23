@@ -9,7 +9,12 @@ function normalizeDomain(input) {
 }
 
 function sendMsg(action, data = {}) {
-  return new Promise(resolve => chrome.runtime.sendMessage({ action, ...data }, resolve));
+  return new Promise(resolve => {
+    chrome.runtime.sendMessage({ action, ...data }, response => {
+      const err = chrome.runtime.lastError;
+      resolve(response);
+    });
+  });
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -45,7 +50,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       const updatePopupTimer = async () => {
         const timersRes = await sendMsg('getTimers');
-        const timers = timersRes.siteTimers || {};
+        const timers = (timersRes && timersRes.siteTimers) || {};
         const today = new Date().toISOString().slice(0, 10);
         const rec = timers[entry.domain];
         const usedMs = (rec && rec.date === today) ? (rec.usedMs || 0) : 0;
