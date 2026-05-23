@@ -70,42 +70,46 @@
 
       <!-- ===== SCHEDULE ===== -->
       <section class="section" id="section-schedule">
-        <h2 class="section-title">Schedule</h2>
-        <p class="section-desc">Automatically enable blocking on specific days and times.</p>
-
-        <div class="field-row">
-          <span class="field-label" style="margin:0;">Enable Schedule</span>
-          <label class="switch">
+        <h2 class="section-title" style="display: flex; justify-content: flex-start; align-items: center; gap: 16px;">
+          <span>Scheduling</span>
+          <label class="switch" style="margin: 0; flex-shrink: 0;">
             <input type="checkbox" id="schedule-enabled" />
             <span class="slider"></span>
           </label>
-        </div>
+        </h2>
+        <p class="section-desc">
+          Configure automated blocking schedules per mode using the calendar map.
+        </p>
 
-        <div class="field-label">Active Days</div>
-        <div class="day-grid">
-          <label class="day-btn"><input type="checkbox" value="0" /> Sunday</label>
-          <label class="day-btn"><input type="checkbox" value="1" checked /> Monday</label>
-          <label class="day-btn"><input type="checkbox" value="2" checked /> Tuesday</label>
-          <label class="day-btn"><input type="checkbox" value="3" checked /> Wednesday</label>
-          <label class="day-btn"><input type="checkbox" value="4" checked /> Thursday</label>
-          <label class="day-btn"><input type="checkbox" value="5" checked /> Friday</label>
-          <label class="day-btn"><input type="checkbox" value="6" /> Saturday</label>
-        </div>
-
-        <div class="field-label">Time Range</div>
-        <div class="time-row">
-          <div class="time-field">
-            <label class="sub-label">From</label>
-            <input type="time" id="sched-start" value="08:00" />
+        <!-- The contents wrapped to blur/hide when not enabled -->
+        <div id="schedule-content-wrapper" class="schedule-content-wrapper">
+          <div class="field-row" style="margin-bottom: 20px;">
+            <span class="field-label" style="margin:0;">Configure Mode:</span>
+            <select id="schedule-mode-select" class="schedule-mode-select"></select>
           </div>
-          <div class="time-sep">—</div>
-          <div class="time-field">
-            <label class="sub-label">To</label>
-            <input type="time" id="sched-end" value="17:00" />
+
+          <div id="schedule-config-container">
+            <div class="field-label" style="margin-bottom: 6px;">Active Hours</div>
+            <p class="section-desc" style="margin-bottom: 12px; font-size: 0.8rem; line-height: 1.3;">
+              Click and drag to paint active block times on the calendar map grid.
+            </p>
+
+            <div class="calendar-map-container">
+              <div class="calendar-map-grid" id="calendar-map-grid"></div>
+              <div class="calendar-map-legend" style="margin-top: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                <div style="display: flex; gap: 8px;">
+                  <button class="btn" id="btn-calendar-clear" style="padding: 6px 12px; font-size: 0.75rem; text-transform: uppercase;">Clear All</button>
+                  <button class="btn" id="btn-calendar-weekdays" style="padding: 6px 12px; font-size: 0.75rem; text-transform: uppercase;">Weekdays (9-5)</button>
+                </div>
+                <div id="calendar-modes-legend" style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;"></div>
+              </div>
+            </div>
           </div>
         </div>
 
-
+        <div id="schedule-no-modes" style="display: none; padding: 20px; border: 1.5px dashed #000000; text-align: center; font-weight: 700; text-transform: uppercase;">
+          Create a mode in the Block List first to configure its schedule.
+        </div>
       </section>
 
       <!-- ===== BLOCK PAGE ===== -->

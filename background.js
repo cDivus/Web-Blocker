@@ -38,6 +38,33 @@ function findMatchingEntry(hostname, entries) {
   }) || null;
 }
 
+function getActiveModeAtTime(data, timestamp) {
+  if (data.enabled === false) return null;
+
+  const modes = data.modes || [];
+  
+  if (data.scheduleEnabled) {
+    // 1. Schedule is enabled: follow the global calendar schedule only
+    const globalSchedule = data.globalSchedule || {};
+    const d2 = new Date(timestamp);
+    const day = d2.getDay(); // 0-6
+    const hour = d2.getHours(); // 0-23
+    const key = `${day}-${hour}`;
+    
+    const scheduledModeId = globalSchedule[key];
+    if (scheduledModeId) {
+      return modes.find(m => m.id === scheduledModeId) || null;
+    }
+    return null; // nothing blocked when no mode is scheduled
+  } else {
+    // 2. Schedule is disabled: follow the manually active mode
+    if (data.activeModeId) {
+      return modes.find(m => m.id === data.activeModeId) || null;
+    }
+    return null;
+  }
+}
+
 // ===== TIMER HELPERS =====
 const TODAY_KEY = () => new Date().toISOString().slice(0, 10); // 'YYYY-MM-DD'
 
@@ -66,16 +93,12 @@ const set = data  => new Promise(r => chrome.storage.local.set(data, r));
 // ===== BLOCKING LOGIC =====
 async function shouldBlock(url) {
   const data = await get([
-    'enabled', 'modes', 'activeModeId', 'schedule', 'scheduleEnabled',
-    'tempUnblocks'
+    'enabled', 'modes', 'activeModeId', 'globalSchedule', 'tempUnblocks', 'scheduleEnabled'
   ]);
 
   if (data.enabled === false) return false;
 
-  const activeModeId = data.activeModeId || null;
-  if (!activeModeId) return false;
-
-  const activeMode = (data.modes || []).find(m => m.id === activeModeId);
+  const activeMode = getActiveModeAtTime(data, Date.now());
   if (!activeMode || !(activeMode.domains || []).length) return false;
 
   const req = getDomainFromUrl(url);
@@ -88,16 +111,6 @@ async function shouldBlock(url) {
   const tmp = data.tempUnblocks || {};
   if (tmp[req] && tmp[req] > now) return false;
 
-  if (data.scheduleEnabled) {
-    const s = data.schedule || {};
-    const d2 = new Date();
-    if (!(s.days || [1,2,3,4,5]).includes(d2.getDay())) return false;
-    const cur = d2.getHours() * 60 + d2.getMinutes();
-    const [sh, sm] = (s.startTime || '08:00').split(':').map(Number);
-    const [eh, em] = (s.endTime   || '17:00').split(':').map(Number);
-    if (cur < sh * 60 + sm || cur >= eh * 60 + em) return false;
-  }
-
   // Timer check: if this entry has a daily limit, check usage
   const entry = typeof matchedEntry === 'string'
     ? { domain: matchedEntry, limitMinutes: null }
@@ -107,7 +120,7 @@ async function shouldBlock(url) {
     const usedMs = await getTimerUsage(entry.domain);
     const limitMs = entry.limitMinutes * 60 * 1000;
     if (usedMs >= limitMs) return true; // Over limit → block
-    return false; // Under limit → allow (and track below)
+    return false; // Under limit → allow
   }
 
   return true;
@@ -140,7 +153,7 @@ async function updateTracker() {
   });
 
   const isBrowserFocused = win && win.focused;
-  const data = await get(['currentTracker', 'modes', 'activeModeId', 'enabled']);
+  const data = await get(['currentTracker', 'modes', 'activeModeId', 'enabled', 'globalSchedule', 'scheduleEnabled']);
   
   const tracker = data.currentTracker || null;
   const isEnabled = data.enabled !== false;
@@ -153,7 +166,7 @@ async function updateTracker() {
   if (isEnabled && isBrowserFocused && activeTab && activeTab.url && !/^(chrome|chrome-extension|about):/.test(activeTab.url)) {
     const domain = getDomainFromUrl(activeTab.url);
     if (domain) {
-      const activeMode = (data.modes || []).find(m => m.id === data.activeModeId);
+      const activeMode = getActiveModeAtTime(data, Date.now());
       if (activeMode) {
         const matched = findMatchingEntry(domain, activeMode.domains);
         if (matched) {
@@ -279,8 +292,8 @@ async function handle(msg, reply) {
   const { action } = msg;
 
   if (action === 'getState') {
-    const data = await get(['enabled','modes','activeModeId','schedule','scheduleEnabled',
-      'tempUnblocks','blockPageContent']);
+    const data = await get(['enabled','modes','activeModeId','globalSchedule',
+      'tempUnblocks','blockPageContent','scheduleEnabled']);
     reply({ ...data, enabled: data.enabled !== false });
 
   } else if (action === 'getTimers') {
@@ -310,7 +323,9 @@ async function handle(msg, reply) {
   } else if (action === 'createMode') {
     const data = await get(['modes']);
     const modes = data.modes || [];
-    const mode = { id: 'mode_' + Date.now(), name: msg.name, builtin: false, domains: [] };
+    const colors = ['blue', 'emerald', 'orange', 'purple', 'rose', 'amber', 'teal', 'magenta'];
+    const assignedColor = colors[modes.length % colors.length];
+    const mode = { id: 'mode_' + Date.now(), name: msg.name, builtin: false, domains: [], color: assignedColor };
     modes.push(mode);
     await set({ modes });
     reply({ ok: true, mode, modes });
@@ -358,8 +373,10 @@ async function handle(msg, reply) {
     await updateTracker();
     reply({ ok: true, domain, mode: modes[idx] });
 
-  } else if (action === 'setSchedule') {
-    await set({ schedule: msg.schedule, scheduleEnabled: msg.enabled }); reply({ ok: true });
+  } else if (action === 'setGlobalSchedule') {
+    await set({ scheduleEnabled: msg.enabled, globalSchedule: msg.globalSchedule || {} });
+    await updateTracker();
+    reply({ ok: true });
 
   } else if (action === 'saveBlockPage') {
     await set({ blockPageContent: msg.content }); reply({ ok: true });
@@ -380,6 +397,7 @@ chrome.runtime.onInstalled.addListener(async () => {
         id: 'builtin-social',
         name: 'Focus',
         builtin: true,
+        color: 'blue',
         domains: [
           { domain: 'facebook.com',  limitMinutes: null },
           { domain: 'instagram.com', limitMinutes: null },
@@ -390,15 +408,13 @@ chrome.runtime.onInstalled.addListener(async () => {
           { domain: 'youtube.com',   limitMinutes: null },
           { domain: 'snapchat.com',  limitMinutes: null },
           { domain: 'pinterest.com', limitMinutes: null },
-          { domain: 'linkedin.com',  limitMinutes: null },
           { domain: 'tumblr.com',    limitMinutes: null },
           { domain: 'twitch.tv',     limitMinutes: null },
-          { domain: 'discord.com',   limitMinutes: null }
         ]
       }],
       activeModeId: null,
+      globalSchedule: {},
       scheduleEnabled: false,
-      schedule: { days: [1,2,3,4,5], startTime: '08:00', endTime: '17:00' },
       tempUnblocks: {}, siteTimers: {}
     });
   }
