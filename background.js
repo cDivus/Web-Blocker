@@ -294,7 +294,7 @@ async function handle(msg, reply) {
 
   if (action === 'getState') {
     const data = await get(['enabled','modes','activeModeId','globalSchedule',
-      'tempUnblocks','blockPageContent','scheduleEnabled']);
+      'tempUnblocks','blockPageContent','scheduleEnabled','password']);
     reply({ ...data, enabled: data.enabled !== false });
 
   } else if (action === 'getTimers') {
@@ -345,6 +345,10 @@ async function handle(msg, reply) {
     const modes = data.modes || [];
     const idx = modes.findIndex(m => m.id === msg.modeId);
     if (idx !== -1) { modes[idx].name = msg.name; await set({ modes }); }
+    reply({ ok: true });
+
+  } else if (action === 'setPassword') {
+    await set({ password: msg.password || '' });
     reply({ ok: true });
 
   } else if (action === 'setModeDomains') {

@@ -104,9 +104,42 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
+  // Check password status on load
+  const pwdContainer = document.getElementById('popup-password-container');
+  const pwdInput = document.getElementById('popup-password-input');
+  const pwdError = document.getElementById('popup-password-error');
+
+  if (state.password) {
+    pwdContainer.style.display = 'block';
+  } else {
+    pwdContainer.style.display = 'none';
+  }
+
   // Open settings
-  document.getElementById('btn-settings').addEventListener('click', () => {
+  document.getElementById('btn-settings').addEventListener('click', async () => {
+    if (state.password) {
+      const enteredVal = pwdInput.value.trim();
+      if (enteredVal !== state.password) {
+        pwdError.textContent = 'Incorrect password.';
+        pwdError.style.display = 'block';
+        return;
+      }
+      pwdError.style.display = 'none';
+      
+      // Set a temporary session unlock key so options page lets us in automatically
+      await new Promise(resolve => {
+        chrome.storage.local.set({ sessionUnlocked: true }, resolve);
+      });
+    }
+
     chrome.tabs.create({ url: chrome.runtime.getURL('src/options/options.html') });
+  });
+
+  // Enable unlock on pressing Enter in the password field
+  pwdInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      document.getElementById('btn-settings').click();
+    }
   });
 });
 
@@ -115,6 +148,11 @@ function updateCount(el, mode) {
     el.textContent = 'No mode active';
     return;
   }
-  const n = (mode.domains || []).length;
+  let n = 0;
+  (mode.domains || []).forEach(e => {
+    if (e && e.domain) {
+      n += e.domain.split(',').filter(Boolean).length;
+    }
+  });
   el.textContent = `${mode.name}: ${n} site${n !== 1 ? 's' : ''}`;
 }

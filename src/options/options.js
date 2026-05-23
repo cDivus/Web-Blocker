@@ -129,6 +129,27 @@ let analyticsInterval = null;
 // ===== INIT =====
 document.addEventListener('DOMContentLoaded', async () => {
   state = await sendMsg('getState');
+
+  // Password Lock screen check
+  const sessionCheck = await new Promise(resolve => {
+    chrome.storage.local.get('sessionUnlocked', resolve);
+  });
+  const isUnlocked = sessionCheck.sessionUnlocked === true;
+  await new Promise(resolve => {
+    chrome.storage.local.remove('sessionUnlocked', resolve);
+  });
+
+  const lockScreen = document.getElementById('password-lock-screen');
+  const layoutEl = document.querySelector('.layout');
+
+  if (state.password && !isUnlocked) {
+    if (layoutEl) layoutEl.style.setProperty('display', 'none', 'important');
+    if (lockScreen) lockScreen.style.display = 'flex';
+  } else {
+    if (lockScreen) lockScreen.style.display = 'none';
+    if (layoutEl) layoutEl.style.display = '';
+  }
+
   assignModeColors(state.modes);
   setupNav();
   renderModes();
@@ -136,6 +157,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderBlockPage();
   setupListeners();
   renderAnalytics();
+  renderPasswordSettings();
   
   // Visibility change logic to stop/start polling
   document.addEventListener('visibilitychange', () => {
@@ -216,8 +238,17 @@ function renderModes() {
     const count = document.createElement('div');
     count.className = 'mode-card-count';
     const entries = mode.domains || [];
-    const n = entries.length;
-    const t = entries.filter(e => e && e.limitMinutes != null).length;
+    let n = 0;
+    let t = 0;
+    entries.forEach(e => {
+      if (e && e.domain) {
+        const countOfDomains = e.domain.split(',').filter(Boolean).length;
+        n += countOfDomains;
+        if (e.limitMinutes != null) {
+          t += countOfDomains;
+        }
+      }
+    });
     count.textContent = `${n} site${n !== 1 ? 's' : ''}${t > 0 ? ` · ${t} timed` : ''}`;
 
     card.appendChild(header);
@@ -661,6 +692,60 @@ function setupListeners() {
     renderBlockPage();
     document.getElementById('mode-editor').style.display = 'none';
   });
+
+  // ---- PASSWORD SETTINGS & LOCK SCREEN ----
+  const setupContainer = document.getElementById('password-setup-container');
+  const activeContainer = document.getElementById('password-active-container');
+  const statusDesc = document.getElementById('password-status-desc');
+  const lockScreen = document.getElementById('password-lock-screen');
+  const layoutEl = document.querySelector('.layout');
+
+  document.getElementById('btn-save-password').addEventListener('click', async () => {
+    const pwdInput = document.getElementById('settings-password-input');
+    const errEl = document.getElementById('password-settings-error');
+    const pwd = pwdInput.value.trim();
+    if (!pwd) {
+      if (errEl) { errEl.textContent = 'Password cannot be empty.'; errEl.style.display = 'block'; }
+      return;
+    }
+    await sendMsg('setPassword', { password: pwd });
+    state.password = pwd;
+    renderPasswordSettings();
+  });
+
+  document.getElementById('btn-remove-password').addEventListener('click', async () => {
+    const pwdInput = document.getElementById('settings-password-remove-input');
+    const errEl = document.getElementById('password-settings-error');
+    const pwd = pwdInput.value.trim();
+    if (pwd !== state.password) {
+      if (errEl) { errEl.textContent = 'Incorrect password.'; errEl.style.display = 'block'; }
+      return;
+    }
+    await sendMsg('setPassword', { password: '' });
+    state.password = '';
+    renderPasswordSettings();
+  });
+
+  document.getElementById('btn-unlock-settings').addEventListener('click', () => {
+    const input = document.getElementById('lock-password-input');
+    const errEl = document.getElementById('lock-error');
+    if (input.value === state.password) {
+      if (errEl) { errEl.style.display = 'none'; }
+      if (lockScreen) lockScreen.style.display = 'none';
+      if (layoutEl) layoutEl.style.display = '';
+    } else {
+      if (errEl) {
+        errEl.textContent = 'Incorrect password.';
+        errEl.style.display = 'block';
+      }
+    }
+  });
+
+  document.getElementById('lock-password-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      document.getElementById('btn-unlock-settings').click();
+    }
+  });
 }
 
 async function createMode() {
@@ -827,4 +912,25 @@ async function renderAnalytics() {
     <div class="analytics-mode-label">Active mode: <strong>${activeMode.name}</strong></div>
     ${rows.join('')}
   `;
+}
+
+function renderPasswordSettings() {
+  const setupContainer = document.getElementById('password-setup-container');
+  const activeContainer = document.getElementById('password-active-container');
+  const statusDesc = document.getElementById('password-status-desc');
+  const errEl = document.getElementById('password-settings-error');
+
+  if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+  document.getElementById('settings-password-input').value = '';
+  document.getElementById('settings-password-remove-input').value = '';
+
+  if (state.password) {
+    if (setupContainer) setupContainer.style.display = 'none';
+    if (activeContainer) activeContainer.style.display = 'block';
+    if (statusDesc) statusDesc.textContent = 'Password Protection is ACTIVE. Settings are locked.';
+  } else {
+    if (setupContainer) setupContainer.style.display = 'block';
+    if (activeContainer) activeContainer.style.display = 'none';
+    if (statusDesc) statusDesc.textContent = 'Restrict settings access using a password.';
+  }
 }

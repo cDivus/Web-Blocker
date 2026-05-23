@@ -1,12 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Web Blocker — Settings</title>
   <link rel="stylesheet" href="options.css" />
 </head>
+
 <body>
+
+  <!-- Password Lock Overlay -->
+  <div id="password-lock-screen" class="lock-screen" style="display: none;">
+    <div class="lock-box">
+      <div class="lock-title">Enter Password</div>
+      <p class="lock-desc">Settings are password protected.</p>
+      <input type="password" id="lock-password-input" class="lock-input" placeholder="Password" />
+      <div class="textarea-error" id="lock-error" style="display: none; margin-bottom: 12px;"></div>
+      <button class="btn full-width" id="btn-unlock-settings">Unlock Settings</button>
+    </div>
+  </div>
 
   <div class="layout">
 
@@ -29,7 +42,7 @@
       <section class="section active" id="section-blocklist">
         <h2 class="section-title">Block List</h2>
         <p class="section-desc">Create and edit your modes.</p>
-        
+
         <div class="schedule-warning-banner" id="schedule-warning-banner" style="display:none;">
           Automated Scheduling is active. Manual mode activation is disabled.
         </div>
@@ -64,8 +77,8 @@
           </div>
 
           <div class="field-label" style="margin-top:0;">Blocked Sites</div>
-          <p class="mode-textarea-hint">One entry per line. Optionally set a daily time limit with <code>domain; minutes</code> (e.g. <strong>facebook.com; 15</strong> for 15 min/day). Domains block exact matches &amp; subdomains. Keywords (e.g. <strong>wiki</strong>) match any hostname containing that word.</p>
-          <textarea id="mode-domains-textarea" rows="12" placeholder="facebook.com; 15&#10;instagram.com; 30&#10;twitter.com"></textarea>
+          <textarea id="mode-domains-textarea" rows="12"
+            placeholder="domain1.com                                 // blocks domain1.com&#10;domain2.com; 15                           // sets daily timer for domain2.com for 15 minutes&#10;keyword                                         // blocks any hostname containing keyword&#10;domain3.com, domain4.com; 15   // sets daily limit for combined domain usage to 15 minutes"></textarea>
           <div class="textarea-error" id="textarea-error" style="display:none;"></div>
           <button class="btn" id="btn-save-mode-domains">Save</button>
         </div>
@@ -100,18 +113,23 @@
 
             <div class="calendar-map-container">
               <div class="calendar-map-grid" id="calendar-map-grid"></div>
-              <div class="calendar-map-legend" style="margin-top: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+              <div class="calendar-map-legend"
+                style="margin-top: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
                 <div style="display: flex; gap: 8px;">
-                  <button class="btn" id="btn-calendar-clear" style="padding: 6px 12px; font-size: 0.75rem; text-transform: uppercase;">Clear All</button>
-                  <button class="btn" id="btn-calendar-weekdays" style="padding: 6px 12px; font-size: 0.75rem; text-transform: uppercase;">Weekdays (9-5)</button>
+                  <button class="btn" id="btn-calendar-clear"
+                    style="padding: 6px 12px; font-size: 0.75rem; text-transform: uppercase;">Clear All</button>
+                  <button class="btn" id="btn-calendar-weekdays"
+                    style="padding: 6px 12px; font-size: 0.75rem; text-transform: uppercase;">Weekdays (9-5)</button>
                 </div>
-                <div id="calendar-modes-legend" style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;"></div>
+                <div id="calendar-modes-legend" style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <div id="schedule-no-modes" style="display: none; padding: 20px; border: 1.5px dashed #000000; text-align: center; font-weight: 700; text-transform: uppercase;">
+        <div id="schedule-no-modes"
+          style="display: none; padding: 20px; border: 1.5px dashed #000000; text-align: center; font-weight: 700; text-transform: uppercase;">
           Create a mode in the Block List first to configure its schedule.
         </div>
       </section>
@@ -143,6 +161,30 @@
         <h2 class="section-title">Other Settings</h2>
         <p class="section-desc">Other user settings.</p>
 
+        <!-- Password Settings -->
+        <div class="danger-card" style="margin-bottom: 16px;">
+          <div class="danger-card-body" style="flex-grow: 1; margin-right: 16px;">
+            <div class="danger-item-title">Password Protection</div>
+            <div class="danger-item-desc" id="password-status-desc">Restrict settings access using a password.</div>
+
+            <div id="password-setup-container" style="margin-top: 12px;">
+              <input type="password" id="settings-password-input" placeholder="New Password"
+                class="mode-editor-name-input"
+                style="width: 200px; display: inline-block; padding: 6px 10px; margin-right: 8px;" />
+              <button class="btn btn-sm" id="btn-save-password">Set Password</button>
+            </div>
+
+            <div id="password-active-container" style="margin-top: 12px; display: none;">
+              <input type="password" id="settings-password-remove-input" placeholder="Current Password"
+                class="mode-editor-name-input"
+                style="width: 200px; display: inline-block; padding: 6px 10px; margin-right: 8px;" />
+              <button class="btn btn-sm btn-danger" id="btn-remove-password">Remove Password</button>
+            </div>
+            <div id="password-settings-error"
+              style="font-size: 0.72rem; color: #cc0000; font-weight: 700; margin-top: 8px; display: none;"></div>
+          </div>
+        </div>
+
         <div class="danger-card">
           <div class="danger-card-body">
             <div class="danger-item-title">Reset All Settings</div>
@@ -157,4 +199,5 @@
 
   <script src="options.js"></script>
 </body>
+
 </html>
