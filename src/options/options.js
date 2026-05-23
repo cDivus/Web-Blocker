@@ -28,11 +28,19 @@ function parseLine(line) {
   const parts = trimmed.split(';');
   if (parts.length > 2) return { error: `Too many semicolons: "${trimmed}"` };
 
-  const domain = normalizeDomain(parts[0]);
-  if (!domain) return { error: `Invalid domain: "${parts[0].trim()}"` };
+  const rawDomains = parts[0].split(',').map(s => s.trim()).filter(Boolean);
+  if (rawDomains.length === 0) return { error: `Invalid empty domains list: "${parts[0]}"` };
+
+  const normalizedItems = [];
+  for (const item of rawDomains) {
+    const norm = normalizeDomain(item);
+    if (!norm) return { error: `Invalid domain or keyword: "${item}"` };
+    normalizedItems.push(norm);
+  }
+  const domainPattern = normalizedItems.join(', ');
 
   if (parts.length === 1) {
-    return { domain, limitMinutes: null };
+    return { domain: domainPattern, limitMinutes: null };
   }
 
   const minStr = parts[1].trim();
@@ -41,7 +49,7 @@ function parseLine(line) {
   if (!Number.isInteger(mins) || mins <= 0) {
     return { error: `Minutes must be a positive integer, got: "${minStr}"` };
   }
-  return { domain, limitMinutes: mins };
+  return { domain: domainPattern, limitMinutes: mins };
 }
 
 /**

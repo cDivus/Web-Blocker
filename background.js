@@ -17,11 +17,17 @@ function getDomainFromUrl(url) {
   catch { return null; }
 }
 
-function entryMatches(hostname, entryDomain) {
-  if (!entryDomain.includes('.')) {
-    return hostname.includes(entryDomain);
+function singleEntryMatches(hostname, entryPart) {
+  const trimmed = entryPart.trim();
+  if (!trimmed.includes('.')) {
+    return hostname.includes(trimmed);
   }
-  return hostname === entryDomain || hostname.endsWith('.' + entryDomain);
+  return hostname === trimmed || hostname.endsWith('.' + trimmed);
+}
+
+function entryMatches(hostname, entryDomain) {
+  const parts = entryDomain.split(',').map(s => s.trim()).filter(Boolean);
+  return parts.some(p => singleEntryMatches(hostname, p));
 }
 
 /** Return the raw entry object { domain, limitMinutes } for this hostname, or null. */
@@ -98,7 +104,7 @@ async function shouldBlock(url) {
     : matchedEntry;
 
   if (entry.limitMinutes != null) {
-    const usedMs = await getTimerUsage(req);
+    const usedMs = await getTimerUsage(entry.domain);
     const limitMs = entry.limitMinutes * 60 * 1000;
     if (usedMs >= limitMs) return true; // Over limit → block
     return false; // Under limit → allow (and track below)
@@ -153,7 +159,7 @@ async function updateTracker() {
         if (matched) {
           const entry = typeof matched === 'string' ? { domain: matched, limitMinutes: null } : matched;
           if (entry.limitMinutes != null) {
-            activeDomain = domain;
+            activeDomain = entry.domain;
             activeTabId = activeTab.id;
             limitMinutes = entry.limitMinutes;
             activeTabUrl = activeTab.url;

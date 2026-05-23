@@ -28,8 +28,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const entry = (activeMode.domains || []).find(e => {
       const d = (typeof e === 'string') ? e : e.domain;
       if (!d) return false;
-      if (!d.includes('.')) return hostname.includes(d);
-      return hostname === d || hostname.endsWith('.' + d);
+      const parts = d.split(',').map(s => s.trim()).filter(Boolean);
+      return parts.some(p => {
+        if (!p.includes('.')) return hostname.includes(p);
+        return hostname === p || hostname.endsWith('.' + p);
+      });
     });
 
     if (entry && entry.limitMinutes != null) {
@@ -38,6 +41,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const timerBar = document.getElementById('active-timer-bar');
 
       timerBox.style.display = 'flex';
+      document.getElementById('active-timer-target').textContent = entry.domain;
 
       const updatePopupTimer = async () => {
         const timersRes = await sendMsg('getTimers');
