@@ -92,3 +92,79 @@ h1 {
   .btn:disabled:hover { background: #0a0a0a; color: #ffffff; }
   .count-row { color: #888888; }
 }
+
+/* ===== ACTIVE TIMER ===== */
+#active-timer-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 6px 0;
+}
+
+.active-timer-header,
+.active-timer-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.active-timer-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #000000;
+}
+
+.active-timer-footer {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #444444;
+}
+
+.analytics-bar-track {
+  height: 12px;
+  border: 1.5px solid #000000;
+  background: #f3f4f6;
+  position: relative;
+  overflow: hidden;
+}
+
+.analytics-bar-fill {
+  height: 100%;
+  width: 0%;
+  background: #10b981; /* Emerald green */
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.analytics-bar-fill.timer-bar-warn {
+  background: #f59e0b; /* Warning amber */
+}
+
+.analytics-bar-fill.timer-bar-full {
+  background: #ef4444; /* Danger rose */
+}
+
+/* Dark Mode Overrides */
+@media (prefers-color-scheme: dark) {
+  .active-timer-title {
+    color: #ffffff;
+  }
+  .active-timer-footer {
+    color: #cccccc;
+  }
+  .analytics-bar-track {
+    border-color: #ffffff;
+    background: #1f2937;
+  }
+  .analytics-bar-fill {
+    background: #34d399; /* Mint emerald */
+  }
+  .analytics-bar-fill.timer-bar-warn {
+    background: #fbbf24;
+  }
+  .analytics-bar-fill.timer-bar-full {
+    background: #f87171;
+  }
+}

@@ -18,6 +18,19 @@
       <!-- Block current site -->
       <button class="btn full-width" id="btn-block-current">Block This Site</button>
 
+      <!-- Current Site Timer (if active) -->
+      <div id="active-timer-box" style="display: none;">
+        <div class="active-timer-header">
+          <span class="active-timer-title">Time Left Today</span>
+        </div>
+        <div class="analytics-bar-track">
+          <div id="active-timer-bar" class="analytics-bar-fill" style="width: 0%;"></div>
+        </div>
+        <div class="active-timer-footer">
+          <span id="active-timer-text">0m 0s left today</span>
+        </div>
+      </div>
+
       <!-- Blocked count -->
       <div class="count-row">
         <span id="blocked-count">0 sites blocked</span>
