@@ -289,6 +289,7 @@ input:checked + .slider::before { transform: translateX(18px); background: #ffff
 .modes-grid {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-start;
   gap: 8px;
   margin-bottom: 16px;
 }
