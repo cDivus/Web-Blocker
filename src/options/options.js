@@ -76,12 +76,6 @@ function sendMsg(action, data = {}) {
 
 
 
-function showSaveMsg(id) {
-  const el = document.getElementById(id);
-  el.style.display = 'inline-block';
-  setTimeout(() => { el.style.display = 'none'; }, 2500);
-}
-
 // Assign persistent colors to modes if they are missing
 function assignModeColors(modes) {
   const colors = ['blue', 'emerald', 'orange', 'purple', 'rose', 'amber', 'teal', 'magenta'];
@@ -124,6 +118,7 @@ let state = {};
 let selectedModeId = null;
 let scheduleModeId = null;
 let originalDomainsText = '';
+let originalBlockPageText = '';
 let analyticsInterval = null;
 
 // ===== INIT =====
@@ -430,6 +425,10 @@ function renderBlockPage() {
   const content = state.blockPageContent || 'You blocked this site for a reason.';
   document.getElementById('block-page-content').value = content;
   document.getElementById('preview-box').textContent = content;
+  originalBlockPageText = content;
+
+  const btnSave = document.getElementById('btn-save-blockpage');
+  if (btnSave) btnSave.disabled = true;
 }
 
 // ===== LISTENERS =====
@@ -649,13 +648,17 @@ function setupListeners() {
   // ---- BLOCK PAGE ----
   document.getElementById('block-page-content').addEventListener('input', e => {
     document.getElementById('preview-box').textContent = e.target.value || 'You blocked this site for a reason.';
+    const btnSave = document.getElementById('btn-save-blockpage');
+    if (btnSave) {
+      btnSave.disabled = (e.target.value === originalBlockPageText);
+    }
   });
 
   document.getElementById('btn-save-blockpage').addEventListener('click', async () => {
-    const content = document.getElementById('block-page-content').value.trim();
+    const content = document.getElementById('block-page-content').value;
     await sendMsg('saveBlockPage', { content });
     state.blockPageContent = content;
-    showSaveMsg('blockpage-saved');
+    renderBlockPage();
   });
 
   // ---- DANGER ----
@@ -666,19 +669,7 @@ function setupListeners() {
       enabled: true,
       modes: [{
         id: 'builtin-social', name: 'Focus', builtin: true, color: 'blue',
-        domains: [
-          { domain: 'facebook.com',  limitMinutes: null },
-          { domain: 'instagram.com', limitMinutes: null },
-          { domain: 'twitter.com',   limitMinutes: null },
-          { domain: 'x.com',         limitMinutes: null },
-          { domain: 'tiktok.com',    limitMinutes: null },
-          { domain: 'reddit.com',    limitMinutes: null },
-          { domain: 'youtube.com',   limitMinutes: null },
-          { domain: 'snapchat.com',  limitMinutes: null },
-          { domain: 'pinterest.com', limitMinutes: null },
-          { domain: 'tumblr.com',    limitMinutes: null },
-          { domain: 'twitch.tv',     limitMinutes: null }
-        ]
+        domains: []
       }],
       activeModeId: null,
       globalSchedule: {},

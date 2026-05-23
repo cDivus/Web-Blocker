@@ -407,19 +407,7 @@ chrome.runtime.onInstalled.addListener(async () => {
         name: 'Focus',
         builtin: true,
         color: 'blue',
-        domains: [
-          { domain: 'facebook.com',  limitMinutes: null },
-          { domain: 'instagram.com', limitMinutes: null },
-          { domain: 'twitter.com',   limitMinutes: null },
-          { domain: 'x.com',         limitMinutes: null },
-          { domain: 'tiktok.com',    limitMinutes: null },
-          { domain: 'reddit.com',    limitMinutes: null },
-          { domain: 'youtube.com',   limitMinutes: null },
-          { domain: 'snapchat.com',  limitMinutes: null },
-          { domain: 'pinterest.com', limitMinutes: null },
-          { domain: 'tumblr.com',    limitMinutes: null },
-          { domain: 'twitch.tv',     limitMinutes: null }
-        ]
+        domains: []
       }],
       activeModeId: null,
       globalSchedule: {},
