@@ -135,9 +135,25 @@ function renderModes() {
     card.className = 'mode-card' + (mode.id === activeModeId ? ' active' : '');
     card.dataset.id = mode.id;
 
+    // Header row: name + pencil icon
+    const header = document.createElement('div');
+    header.className = 'mode-card-header';
+
     const name = document.createElement('div');
     name.className = 'mode-card-name';
     name.textContent = mode.name;
+
+    const pencil = document.createElement('button');
+    pencil.className = 'btn-icon mode-card-pencil';
+    pencil.title = 'Configure mode';
+    pencil.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>';
+    pencil.addEventListener('click', e => {
+      e.stopPropagation();
+      handlePencilClick(mode.id);
+    });
+
+    header.appendChild(name);
+    header.appendChild(pencil);
 
     const count = document.createElement('div');
     count.className = 'mode-card-count';
@@ -146,7 +162,7 @@ function renderModes() {
     const t = entries.filter(e => e && e.limitMinutes != null).length;
     count.textContent = `${n} site${n !== 1 ? 's' : ''}${t > 0 ? ` · ${t} timed` : ''}`;
 
-    card.appendChild(name);
+    card.appendChild(header);
     card.appendChild(count);
 
     if (mode.id === activeModeId) {
@@ -168,9 +184,17 @@ async function handleCardClick(modeId) {
   await sendMsg('setActiveMode', { modeId: newActiveId });
   state.activeModeId = newActiveId;
   renderModes();
-  // Always open editor for clicked mode
-  selectedModeId = modeId;
-  renderModeEditor();
+}
+
+function handlePencilClick(modeId) {
+  if (selectedModeId === modeId) {
+    // Already open for this mode — close it
+    selectedModeId = null;
+    document.getElementById('mode-editor').style.display = 'none';
+  } else {
+    selectedModeId = modeId;
+    renderModeEditor();
+  }
 }
 
 function renderModeEditor() {
@@ -184,7 +208,6 @@ function renderModeEditor() {
   document.getElementById('mode-editor-name').textContent = mode.name;
   document.getElementById('mode-editor-name').style.display = '';
   document.getElementById('mode-editor-name-input').style.display = 'none';
-  document.getElementById('btn-rename-mode').innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>';
   // Populate textarea — one entry per line in "domain" or "domain; minutes" format
   document.getElementById('mode-domains-textarea').value = serializeEntries(mode.domains);
   // Clear any previous error
@@ -232,7 +255,6 @@ function setupListeners() {
     if (e.key === 'Enter') createMode();
   });
 
-  const renameBtn = document.getElementById('btn-rename-mode');
   const nameSpan = document.getElementById('mode-editor-name');
   const nameInput = document.getElementById('mode-editor-name-input');
 
@@ -250,23 +272,22 @@ function setupListeners() {
     }
     nameSpan.style.display = '';
     nameInput.style.display = 'none';
-    renameBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>';
   };
 
-  renameBtn.addEventListener('click', () => {
+  nameSpan.addEventListener('dblclick', () => {
     const mode = (state.modes || []).find(m => m.id === selectedModeId);
     if (!mode) return;
 
-    const isEditing = nameInput.style.display !== 'none';
-    if (isEditing) {
+    nameSpan.style.display = 'none';
+    nameInput.style.display = '';
+    nameInput.value = mode.name;
+    nameInput.focus();
+    nameInput.select();
+  });
+
+  nameInput.addEventListener('blur', () => {
+    if (nameInput.style.display !== 'none') {
       saveInlineName();
-    } else {
-      nameSpan.style.display = 'none';
-      nameInput.style.display = '';
-      nameInput.value = mode.name;
-      nameInput.focus();
-      nameInput.select();
-      renameBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
     }
   });
 
@@ -276,7 +297,7 @@ function setupListeners() {
     } else if (e.key === 'Escape') {
       nameSpan.style.display = '';
       nameInput.style.display = 'none';
-      renameBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>';
+      nameInput.blur();
     }
   });
 

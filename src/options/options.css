@@ -475,11 +475,31 @@ input:checked + .slider::before { transform: translateX(18px); background: #ffff
   color: #ffffff;
 }
 
+.mode-card.active .mode-card-pencil {
+  color: #ffffff;
+}
+
+.mode-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .mode-card-name {
-  font-size: 0.85rem;
+  font-size: 1rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.4px;
+}
+
+.mode-card-pencil {
+  opacity: 1;
+  flex-shrink: 0;
+}
+
+.mode-card-pencil:hover {
+  opacity: 0.7 !important;
 }
 
 .mode-card-count {
@@ -529,6 +549,8 @@ input:checked + .slider::before { transform: translateX(18px); background: #ffff
   text-transform: uppercase;
   letter-spacing: 0.5px;
   flex: 1;
+  cursor: pointer;
+  user-select: none;
 }
 
 .mode-editor-name-input {
@@ -675,6 +697,7 @@ input:checked + .slider::before { transform: translateX(18px); background: #ffff
   .mode-card { background: #0a0a0a; border-color: #ffffff; color: #ffffff; }
   .mode-card:hover { background: #1a1a1a; }
   .mode-card.active { background: #ffffff; color: #000000; }
+  .mode-card.active .mode-card-pencil { color: #000000; }
   .mode-editor { border-color: #ffffff; }
   .mode-editor-header { border-bottom-color: #ffffff; }
   .mode-textarea-hint code { background: #222222; color: #cccccc; }
