@@ -4,6 +4,7 @@
 function normalizeDomain(raw) {
   const trimmed = raw.trim().toLowerCase();
   if (!trimmed) return '';
+  if (trimmed.includes(' ')) return ''; // Spaces are never allowed in domains or keywords!
   if (!trimmed.includes('.')) return trimmed; // keyword
   try {
     let url = trimmed;
@@ -122,6 +123,7 @@ function renderLegend() {
 let state = {};
 let selectedModeId = null;
 let scheduleModeId = null;
+let originalDomainsText = '';
 let analyticsInterval = null;
 
 // ===== INIT =====
@@ -183,12 +185,25 @@ function renderModes() {
   const grid = document.getElementById('modes-grid');
   grid.innerHTML = '';
 
+  const isScheduled = state.scheduleEnabled || false;
+  const warningBanner = document.getElementById('schedule-warning-banner');
+  if (warningBanner) {
+    warningBanner.style.display = isScheduled ? 'block' : 'none';
+  }
+
+  if (isScheduled) {
+    grid.classList.add('schedule-active');
+  } else {
+    grid.classList.remove('schedule-active');
+  }
+
   modes.forEach(mode => {
+    const isActive = (mode.id === activeModeId);
     const card = document.createElement('div');
-    card.className = 'mode-card' + (mode.id === activeModeId ? ' active' : '');
+    card.className = 'mode-card' + (isActive ? ' active' : '');
     card.dataset.id = mode.id;
 
-    // Header row: name + pencil icon
+    // Header row: name
     const header = document.createElement('div');
     header.className = 'mode-card-header';
 
@@ -196,17 +211,7 @@ function renderModes() {
     name.className = 'mode-card-name';
     name.textContent = mode.name;
 
-    const pencil = document.createElement('button');
-    pencil.className = 'btn-icon mode-card-pencil';
-    pencil.title = 'Configure mode';
-    pencil.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>';
-    pencil.addEventListener('click', e => {
-      e.stopPropagation();
-      handlePencilClick(mode.id);
-    });
-
     header.appendChild(name);
-    header.appendChild(pencil);
 
     const count = document.createElement('div');
     count.className = 'mode-card-count';
@@ -218,19 +223,20 @@ function renderModes() {
     card.appendChild(header);
     card.appendChild(count);
 
-    if (mode.id === activeModeId) {
+    if (isActive) {
       const badge = document.createElement('div');
       badge.className = 'mode-card-status';
       badge.textContent = 'Active';
       card.appendChild(badge);
     }
 
-    card.addEventListener('click', () => handleCardClick(mode.id));
+    card.addEventListener('click', () => handlePencilClick(mode.id));
     grid.appendChild(card);
   });
 }
 
 async function handleCardClick(modeId) {
+  if (state.scheduleEnabled) return; // Prevent activation when scheduling is enabled!
   const wasActive = state.activeModeId === modeId;
   // Toggle active: click active card → deactivate; click inactive → activate
   const newActiveId = wasActive ? null : modeId;
@@ -262,10 +268,33 @@ function renderModeEditor() {
   document.getElementById('mode-editor-name').style.display = '';
   document.getElementById('mode-editor-name-input').style.display = 'none';
   // Populate textarea — one entry per line in "domain" or "domain; minutes" format
-  document.getElementById('mode-domains-textarea').value = serializeEntries(mode.domains);
+  const serialized = serializeEntries(mode.domains);
+  document.getElementById('mode-domains-textarea').value = serialized;
+  originalDomainsText = serialized;
+
+  // Disable the save button initially since no changes are made yet
+  const btnSave = document.getElementById('btn-save-mode-domains');
+  if (btnSave) btnSave.disabled = true;
+
   // Clear any previous error
   const errEl = document.getElementById('textarea-error');
   if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+
+  const btnActivate = document.getElementById('btn-activate-mode');
+  if (btnActivate) {
+    if (state.scheduleEnabled) {
+      btnActivate.style.display = 'none';
+    } else {
+      btnActivate.style.display = 'inline-block';
+      const isActive = (state.activeModeId === selectedModeId);
+      btnActivate.textContent = isActive ? 'Deactivate' : 'Activate';
+      if (isActive) {
+        btnActivate.classList.add('btn-active-toggle');
+      } else {
+        btnActivate.classList.remove('btn-active-toggle');
+      }
+    }
+  }
 }
 
 
@@ -437,6 +466,18 @@ function setupListeners() {
     }
   });
 
+  document.getElementById('btn-activate-mode').addEventListener('click', async () => {
+    if (state.scheduleEnabled) return;
+    const mode = (state.modes || []).find(m => m.id === selectedModeId);
+    if (!mode) return;
+    const wasActive = state.activeModeId === selectedModeId;
+    const newActiveId = wasActive ? null : selectedModeId;
+    await sendMsg('setActiveMode', { modeId: newActiveId });
+    state.activeModeId = newActiveId;
+    renderModes();
+    renderModeEditor();
+  });
+
   document.getElementById('btn-delete-mode').addEventListener('click', async () => {
     const mode = (state.modes || []).find(m => m.id === selectedModeId);
     if (!mode) return;
@@ -452,15 +493,13 @@ function setupListeners() {
   });
 
   document.getElementById('btn-save-mode-domains').addEventListener('click', saveModeDomainsFromTextarea);
-  document.getElementById('btn-cancel-mode-domains').addEventListener('click', () => {
-    const mode = (state.modes || []).find(m => m.id === selectedModeId);
-    if (mode) {
-      document.getElementById('mode-domains-textarea').value = serializeEntries(mode.domains);
+
+  document.getElementById('mode-domains-textarea').addEventListener('input', () => {
+    const currentText = document.getElementById('mode-domains-textarea').value;
+    const btnSave = document.getElementById('btn-save-mode-domains');
+    if (btnSave) {
+      btnSave.disabled = (currentText === originalDomainsText);
     }
-    const errEl = document.getElementById('textarea-error');
-    if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
-    document.getElementById('mode-editor').style.display = 'none';
-    selectedModeId = null;
   });
 
 
@@ -685,9 +724,7 @@ async function saveModeDomainsFromTextarea() {
     const idx = (state.modes || []).findIndex(m => m.id === selectedModeId);
     if (idx !== -1) state.modes[idx].domains = entries;
     renderModes();
-    // Hide the mode editor and clear selection
-    document.getElementById('mode-editor').style.display = 'none';
-    selectedModeId = null;
+    renderModeEditor();
   }
 }
 
@@ -715,6 +752,10 @@ async function saveSchedule() {
   // Keep local state in sync
   state.globalSchedule = globalSchedule;
   state.scheduleEnabled = enabled;
+  if (enabled) {
+    state.activeModeId = null;
+  }
+  renderModes();
 }
 
 // ===== ANALYTICS =====

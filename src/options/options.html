@@ -18,7 +18,7 @@
         <button class="nav-btn" data-section="schedule">Schedule</button>
         <button class="nav-btn" data-section="blockpage">Block Page</button>
         <button class="nav-btn" data-section="analytics">Analytics</button>
-        <button class="nav-btn" data-section="danger">Preferences</button>
+        <button class="nav-btn" data-section="danger">Other Settings</button>
       </nav>
     </aside>
 
@@ -28,8 +28,12 @@
       <!-- ===== BLOCK LIST ===== -->
       <section class="section active" id="section-blocklist">
         <h2 class="section-title">Block List</h2>
-        <p class="section-desc">Select a mode to activate blocking. Only one mode can be active at a time.</p>
-
+        <p class="section-desc">Create and edit your modes.</p>
+        
+        <div class="schedule-warning-banner" id="schedule-warning-banner" style="display:none;">
+          Automated Scheduling is active. Manual mode activation is disabled.
+        </div>
+        <br>
         <!-- Modes header -->
         <div class="modes-header">
           <span class="field-label" style="margin:0; border:none;">Modes</span>
@@ -54,6 +58,7 @@
               <input type="text" id="mode-editor-name-input" class="mode-editor-name-input" style="display:none;" />
             </div>
             <div class="mode-editor-btns">
+              <button class="btn btn-sm" id="btn-activate-mode">Activate</button>
               <button class="btn btn-sm btn-danger" id="btn-delete-mode">Delete</button>
             </div>
           </div>
@@ -63,7 +68,6 @@
           <textarea id="mode-domains-textarea" rows="12" placeholder="facebook.com; 15&#10;instagram.com; 30&#10;twitter.com"></textarea>
           <div class="textarea-error" id="textarea-error" style="display:none;"></div>
           <button class="btn" id="btn-save-mode-domains">Save</button>
-          <button class="btn" id="btn-cancel-mode-domains" style="margin-left: 8px;">Cancel</button>
         </div>
       </section>
 
@@ -78,7 +82,7 @@
           </label>
         </h2>
         <p class="section-desc">
-          Configure automated blocking schedules per mode using the calendar map.
+          Schedule your modes.
         </p>
 
         <!-- The contents wrapped to blur/hide when not enabled -->
@@ -115,7 +119,7 @@
       <!-- ===== BLOCK PAGE ===== -->
       <section class="section" id="section-blockpage">
         <h2 class="section-title">Block Page</h2>
-        <p class="section-desc">Customize the message shown when a blocked site is visited.</p>
+        <p class="section-desc">Customize your block page.</p>
 
         <div class="field-label">Message</div>
         <textarea id="block-page-content" rows="4" placeholder="You blocked this site for a reason."></textarea>
@@ -130,19 +134,19 @@
       <!-- ===== ANALYTICS ===== -->
       <section class="section" id="section-analytics">
         <h2 class="section-title">Analytics</h2>
-        <p class="section-desc">Daily time remaining for timed sites in the active mode. Resets at midnight.</p>
+        <p class="section-desc">Analytics for your timers. Resets at midnight.</p>
         <div id="analytics-content"></div>
       </section>
 
-      <!-- ===== PREFERENCES ===== -->
+      <!-- ===== OTHER ===== -->
       <section class="section" id="section-danger">
-        <h2 class="section-title">Preferences</h2>
-        <p class="section-desc">These actions are permanent and cannot be undone.</p>
+        <h2 class="section-title">Other Settings</h2>
+        <p class="section-desc">Other user settings.</p>
 
         <div class="danger-card">
           <div class="danger-card-body">
             <div class="danger-item-title">Reset All Settings</div>
-            <div class="danger-item-desc">Restore everything to factory defaults.</div>
+            <div class="danger-item-desc">Restore everything to default settings.</div>
           </div>
           <button class="btn btn-danger" id="btn-reset-all">Reset</button>
         </div>

@@ -2,6 +2,7 @@
 function normalizeDomain(input) {
   const trimmed = input.trim().toLowerCase();
   if (!trimmed) return '';
+  if (trimmed.includes(' ')) return ''; // Spaces are never allowed in domains or keywords!
   if (!trimmed.includes('.')) return trimmed;
   try {
     let url = trimmed;
@@ -374,7 +375,11 @@ async function handle(msg, reply) {
     reply({ ok: true, domain, mode: modes[idx] });
 
   } else if (action === 'setGlobalSchedule') {
-    await set({ scheduleEnabled: msg.enabled, globalSchedule: msg.globalSchedule || {} });
+    const upd = { scheduleEnabled: msg.enabled, globalSchedule: msg.globalSchedule || {} };
+    if (msg.enabled) {
+      upd.activeModeId = null;
+    }
+    await set(upd);
     await updateTracker();
     reply({ ok: true });
 
