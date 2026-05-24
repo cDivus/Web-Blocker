@@ -294,7 +294,8 @@ async function handle(msg, reply) {
 
   if (action === 'getState') {
     const data = await get(['enabled','modes','activeModeId','globalSchedule',
-      'tempUnblocks','blockPageContent','scheduleEnabled','password']);
+      'tempUnblocks','blockPageContent','scheduleEnabled','password',
+      'blockPageType','customBlockHtml','customBlockAssets','customBlockName']);
     reply({ ...data, enabled: data.enabled !== false });
 
   } else if (action === 'getTimers') {
@@ -388,7 +389,20 @@ async function handle(msg, reply) {
     reply({ ok: true });
 
   } else if (action === 'saveBlockPage') {
-    await set({ blockPageContent: msg.content }); reply({ ok: true });
+    if (msg.type === 'custom') {
+      await set({
+        blockPageType: 'custom',
+        customBlockHtml: msg.html,
+        customBlockAssets: msg.assets,
+        customBlockName: msg.name
+      });
+    } else {
+      await set({
+        blockPageType: 'default',
+        blockPageContent: msg.content
+      });
+    }
+    reply({ ok: true });
 
   } else if (action === 'getCurrentTab') {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });

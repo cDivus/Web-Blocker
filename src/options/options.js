@@ -119,6 +119,15 @@ let selectedModeId = null;
 let scheduleModeId = null;
 let originalDomainsText = '';
 let originalBlockPageText = '';
+let originalBlockPageType = 'default';
+let originalCustomHtml = '';
+let originalCustomAssets = {};
+let originalCustomName = '';
+
+let tempCustomHtml = null;
+let tempCustomAssets = null;
+let tempCustomName = null;
+let currentBlockPageType = 'default';
 let analyticsInterval = null;
 
 // ===== INIT =====
@@ -428,13 +437,189 @@ function renderSchedule() {
 
 // ===== BLOCK PAGE =====
 function renderBlockPage() {
-  const content = state.blockPageContent || 'You blocked this site for a reason.';
-  document.getElementById('block-page-content').value = content;
-  document.getElementById('preview-box').textContent = content;
-  originalBlockPageText = content;
+  // Load original states
+  originalBlockPageType = state.blockPageType || 'default';
+  originalBlockPageText = state.blockPageContent || 'You blocked this site for a reason.';
+  originalCustomHtml = state.customBlockHtml || '';
+  originalCustomAssets = state.customBlockAssets || {};
+  originalCustomName = state.customBlockName || '';
+
+  // Reset temp/current states
+  currentBlockPageType = originalBlockPageType;
+  tempCustomHtml = null;
+  tempCustomAssets = null;
+  tempCustomName = null;
+
+  // Set default message inputs
+  document.getElementById('block-page-content').value = originalBlockPageText;
+  document.getElementById('preview-box').textContent = originalBlockPageText;
+
+  // Set custom file names
+  document.getElementById('blockpage-file-name').textContent = originalCustomName || 'No file selected';
+
+  // Render toggle button active styles
+  updateBlockPageToggleButtons();
+
+  // Show the correct container
+  toggleBlockPageContainers();
+
+  // Load custom preview iframe if it exists
+  const iframe = document.getElementById('custom-preview-iframe');
+  const container = document.getElementById('custom-preview-container');
+  if (originalBlockPageType === 'custom' && originalCustomHtml && iframe && container) {
+    try {
+      const compiled = compileCustomBlockPage(originalCustomHtml, originalCustomAssets);
+      iframe.srcdoc = compiled;
+      container.style.display = 'block';
+    } catch (err) {
+      console.error('Failed to load custom block page preview:', err);
+    }
+  } else if (container) {
+    container.style.display = 'none';
+  }
+
+  // Clear file input
+  document.getElementById('blockpage-file-input').value = '';
 
   const btnSave = document.getElementById('btn-save-blockpage');
   if (btnSave) btnSave.disabled = true;
+}
+
+function updateBlockPageToggleButtons() {
+  const btnDefault = document.getElementById('btn-blockpage-type-default');
+  const btnCustom = document.getElementById('btn-blockpage-type-custom');
+
+  if (currentBlockPageType === 'custom') {
+    btnDefault.className = 'btn';
+    btnCustom.className = 'btn btn-active-toggle';
+  } else {
+    btnDefault.className = 'btn btn-active-toggle';
+    btnCustom.className = 'btn';
+  }
+}
+
+function toggleBlockPageContainers() {
+  const containerDefault = document.getElementById('blockpage-container-default');
+  const containerCustom = document.getElementById('blockpage-container-custom');
+
+  if (currentBlockPageType === 'custom') {
+    containerDefault.style.display = 'none';
+    containerCustom.style.display = 'block';
+  } else {
+    containerDefault.style.display = 'block';
+    containerCustom.style.display = 'none';
+  }
+}
+
+function checkBlockPageSaveStatus() {
+  const btnSave = document.getElementById('btn-save-blockpage');
+  if (!btnSave) return;
+
+  if (currentBlockPageType !== originalBlockPageType) {
+    // If template type changed
+    if (currentBlockPageType === 'custom') {
+      btnSave.disabled = !(originalCustomHtml || tempCustomHtml);
+    } else {
+      btnSave.disabled = false;
+    }
+  } else {
+    // If same type, check changes within that type
+    if (currentBlockPageType === 'custom') {
+      btnSave.disabled = (tempCustomHtml === null);
+    } else {
+      const currentText = document.getElementById('block-page-content').value;
+      btnSave.disabled = (currentText === originalBlockPageText);
+    }
+  }
+}
+
+function getMimeType(filename) {
+  const ext = filename.split('.').pop().toLowerCase();
+  switch (ext) {
+    case 'css': return 'text/css';
+    case 'png': return 'image/png';
+    case 'jpg':
+    case 'jpeg': return 'image/jpeg';
+    case 'gif': return 'image/gif';
+    case 'svg': return 'image/svg+xml';
+    case 'woff': return 'font/woff';
+    case 'woff2': return 'font/woff2';
+    case 'otf': return 'font/otf';
+    case 'ttf': return 'font/ttf';
+    default: return 'application/octet-stream';
+  }
+}
+
+function compileCustomBlockPage(html, assets) {
+  if (!html) return '';
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+
+  // Helper to resolve relative path references
+  function resolveAsset(ref) {
+    if (!ref || ref.startsWith('data:') || ref.startsWith('http:') || ref.startsWith('https:')) {
+      return ref;
+    }
+    // Clean leading ./ or /
+    const cleanRef = ref.replace(/^\.\//, '').replace(/^\//, '').toLowerCase();
+    
+    // Look for exact match
+    for (let key in assets) {
+      if (key.toLowerCase() === cleanRef) {
+        return assets[key];
+      }
+    }
+
+    // Try finding key ending with cleanRef
+    for (let key in assets) {
+      if (key.toLowerCase().endsWith(cleanRef)) {
+        return assets[key];
+      }
+    }
+    return ref;
+  }
+
+  // Rewrite stylesheet links
+  doc.querySelectorAll('link[rel="stylesheet"]').forEach(el => {
+    const href = el.getAttribute('href');
+    if (href) {
+      const resolved = resolveAsset(href);
+      if (resolved !== href) el.setAttribute('href', resolved);
+    }
+  });
+
+  // Rewrite images
+  doc.querySelectorAll('img').forEach(el => {
+    const src = el.getAttribute('src');
+    if (src) {
+      const resolved = resolveAsset(src);
+      if (resolved !== src) el.setAttribute('src', resolved);
+    }
+  });
+
+  // Strip scripts strictly for security
+  doc.querySelectorAll('script').forEach(tag => tag.remove());
+  
+  // Defense-in-depth: strip inline event handlers and javascript: protocol URIs on all elements
+  doc.querySelectorAll('*').forEach(el => {
+    for (let i = el.attributes.length - 1; i >= 0; i--) {
+      const attrName = el.attributes[i].name.toLowerCase();
+      if (attrName.startsWith('on')) {
+        el.removeAttribute(el.attributes[i].name);
+      }
+    }
+    const href = el.getAttribute('href');
+    if (href && href.trim().toLowerCase().startsWith('javascript:')) {
+      el.removeAttribute('href');
+    }
+    const src = el.getAttribute('src');
+    if (src && src.trim().toLowerCase().startsWith('javascript:')) {
+      el.removeAttribute('src');
+    }
+  });
+
+  // Safe serialization
+  return doc.documentElement.outerHTML;
 }
 
 // ===== LISTENERS =====
@@ -652,18 +837,161 @@ function setupListeners() {
   }
 
   // ---- BLOCK PAGE ----
-  document.getElementById('block-page-content').addEventListener('input', e => {
-    document.getElementById('preview-box').textContent = e.target.value || 'You blocked this site for a reason.';
-    const btnSave = document.getElementById('btn-save-blockpage');
-    if (btnSave) {
-      btnSave.disabled = (e.target.value === originalBlockPageText);
+  // Toggle: Default Message
+  document.getElementById('btn-blockpage-type-default').addEventListener('click', () => {
+    currentBlockPageType = 'default';
+    updateBlockPageToggleButtons();
+    toggleBlockPageContainers();
+    checkBlockPageSaveStatus();
+  });
+
+  // Toggle: Custom ZIP / HTML
+  document.getElementById('btn-blockpage-type-custom').addEventListener('click', () => {
+    currentBlockPageType = 'custom';
+    updateBlockPageToggleButtons();
+    toggleBlockPageContainers();
+    checkBlockPageSaveStatus();
+  });
+
+  // Choose file trigger
+  document.getElementById('btn-blockpage-file-select').addEventListener('click', () => {
+    document.getElementById('blockpage-file-input').click();
+  });
+
+  // File input change handler (parsing ZIP or HTML)
+  document.getElementById('blockpage-file-input').addEventListener('change', async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const fileNameEl = document.getElementById('blockpage-file-name');
+    fileNameEl.textContent = file.name;
+
+    const ext = file.name.split('.').pop().toLowerCase();
+    
+    if (ext === 'html' || ext === 'htm') {
+      // Single HTML file
+      const reader = new FileReader();
+      reader.onload = event => {
+        tempCustomHtml = event.target.result;
+        tempCustomAssets = {};
+        tempCustomName = file.name;
+
+        // Render preview
+        const iframe = document.getElementById('custom-preview-iframe');
+        const container = document.getElementById('custom-preview-container');
+        if (iframe && container) {
+          const compiled = compileCustomBlockPage(tempCustomHtml, tempCustomAssets);
+          iframe.srcdoc = compiled;
+          container.style.display = 'block';
+        }
+        checkBlockPageSaveStatus();
+      };
+      reader.onerror = () => {
+        alert('Failed to read HTML file.');
+      };
+      reader.readAsText(file);
+    } else if (ext === 'zip') {
+      // ZIP archive
+      const reader = new FileReader();
+      reader.onload = async event => {
+        try {
+          const arrayBuffer = event.target.result;
+          const zip = await JSZip.loadAsync(arrayBuffer);
+          
+          // Find the entry HTML file
+          let indexFile = null;
+          for (let path in zip.files) {
+            if (path.toLowerCase().endsWith('index.html') || path.toLowerCase().endsWith('index.htm')) {
+              indexFile = zip.files[path];
+              break;
+            }
+          }
+          if (!indexFile) {
+            for (let path in zip.files) {
+              if (path.toLowerCase().endsWith('.html') || path.toLowerCase().endsWith('.htm')) {
+                indexFile = zip.files[path];
+                break;
+              }
+            }
+          }
+
+          if (!indexFile) {
+            alert('Error: No HTML file (index.html or similar) found inside the ZIP archive.');
+            fileNameEl.textContent = 'No file selected';
+            return;
+          }
+
+          const htmlContent = await indexFile.async('string');
+          const assets = {};
+
+          for (let path in zip.files) {
+            const zipObj = zip.files[path];
+            if (zipObj.dir || zipObj === indexFile) continue;
+
+            const mime = getMimeType(path);
+            const base64Data = await zipObj.async('base64');
+            assets[path] = `data:${mime};base64,${base64Data}`;
+          }
+
+          tempCustomHtml = htmlContent;
+          tempCustomAssets = assets;
+          tempCustomName = file.name;
+
+          // Render preview
+          const iframe = document.getElementById('custom-preview-iframe');
+          const container = document.getElementById('custom-preview-container');
+          if (iframe && container) {
+            const compiled = compileCustomBlockPage(tempCustomHtml, tempCustomAssets);
+            iframe.srcdoc = compiled;
+            container.style.display = 'block';
+          }
+          checkBlockPageSaveStatus();
+        } catch (err) {
+          console.error(err);
+          alert('Failed to parse ZIP archive. Make sure it is a valid zip file.');
+          fileNameEl.textContent = 'No file selected';
+        }
+      };
+      reader.onerror = () => {
+        alert('Failed to read ZIP file.');
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      alert('Unsupported file type. Please upload a .zip or .html file.');
+      fileNameEl.textContent = 'No file selected';
     }
   });
 
+  document.getElementById('block-page-content').addEventListener('input', e => {
+    document.getElementById('preview-box').textContent = e.target.value || 'You blocked this site for a reason.';
+    checkBlockPageSaveStatus();
+  });
+
   document.getElementById('btn-save-blockpage').addEventListener('click', async () => {
-    const content = document.getElementById('block-page-content').value;
-    await sendMsg('saveBlockPage', { content });
-    state.blockPageContent = content;
+    if (currentBlockPageType === 'custom') {
+      const html = tempCustomHtml !== null ? tempCustomHtml : originalCustomHtml;
+      const assets = tempCustomAssets !== null ? tempCustomAssets : originalCustomAssets;
+      const name = tempCustomName !== null ? tempCustomName : originalCustomName;
+
+      await sendMsg('saveBlockPage', {
+        type: 'custom',
+        html,
+        assets,
+        name
+      });
+      state.blockPageType = 'custom';
+      state.customBlockHtml = html;
+      state.customBlockAssets = assets;
+      state.customBlockName = name;
+    } else {
+      const content = document.getElementById('block-page-content').value;
+      await sendMsg('saveBlockPage', {
+        type: 'default',
+        content
+      });
+      state.blockPageType = 'default';
+      state.blockPageContent = content;
+    }
     renderBlockPage();
   });
 

@@ -139,13 +139,46 @@
         <h2 class="section-title">Block Page</h2>
         <p class="section-desc">Customize your block page.</p>
 
-        <div class="field-label">Message</div>
-        <textarea id="block-page-content" rows="4" placeholder="You blocked this site for a reason."></textarea>
+        <!-- Template Toggle -->
+        <div class="field-label">Template Type</div>
+        <div style="display: flex; gap: 12px; margin-bottom: 20px;">
+          <button class="btn btn-active-toggle" id="btn-blockpage-type-default" style="flex: 1;">Default Message</button>
+          <button class="btn" id="btn-blockpage-type-custom" style="flex: 1;">Custom ZIP / HTML</button>
+        </div>
 
-        <div class="field-label" style="margin-top:16px;">Preview</div>
-        <div class="preview-box" id="preview-box">You blocked this site for a reason.</div>
+        <!-- Default Message Container -->
+        <div id="blockpage-container-default">
+          <div class="field-label">Message</div>
+          <textarea id="block-page-content" rows="4" placeholder="You blocked this site for a reason."></textarea>
+          
+          <div class="field-label" style="margin-top:16px;">Preview</div>
+          <div class="preview-box" id="preview-box">You blocked this site for a reason.</div>
+        </div>
 
-        <button class="btn" id="btn-save-blockpage">Save</button>
+        <!-- Custom Upload Container -->
+        <div id="blockpage-container-custom" style="display: none;">
+          <div class="field-label">Upload ZIP or HTML File</div>
+          <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 16px;">
+            <input type="file" id="blockpage-file-input" accept=".zip, .html, .htm" style="display: none;" />
+            <button class="btn" id="btn-blockpage-file-select">Choose File</button>
+            <span id="blockpage-file-name" style="font-size: 0.85rem; font-style: italic; color: #555; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px;">No file selected</span>
+          </div>
+          <div class="schedule-warning-banner" style="margin-bottom: 20px; font-weight: 500; font-size: 0.85rem; border-color: #000000; color: #000000; background: #fafafa;">
+            Upload a single <strong>.html</strong> file or a <strong>.zip</strong> containing an <strong>index.html</strong> file. 
+            All JavaScript/scripts will be strictly disabled for maximum security.
+          </div>
+          
+          <div id="custom-preview-container" style="display: none;">
+            <div class="field-label">Custom Preview</div>
+            <div style="border: 1.5px solid #000000; height: 300px; background: #ffffff; position: relative;">
+              <iframe id="custom-preview-iframe" sandbox="allow-same-origin" style="width: 100%; height: 100%; border: none;"></iframe>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 20px;">
+          <button class="btn" id="btn-save-blockpage" disabled>Save</button>
+        </div>
       </section>
 
       <!-- ===== ANALYTICS ===== -->
@@ -196,6 +229,7 @@
     </main>
   </div>
 
+  <script src="jszip.min.js"></script>
   <script src="options.js"></script>
 </body>
 
