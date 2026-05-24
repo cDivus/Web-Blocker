@@ -89,7 +89,7 @@ function assignModeColors(modes) {
 function renderLegend() {
   const legendContainer = document.getElementById('calendar-modes-legend');
   if (!legendContainer) return;
-  legendContainer.innerHTML = '';
+  legendContainer.textContent = '';
   
   const modes = state.modes || [];
   modes.forEach(mode => {
@@ -200,7 +200,7 @@ function renderModes() {
   const modes = state.modes || [];
   const activeModeId = state.activeModeId || null;
   const grid = document.getElementById('modes-grid');
-  grid.innerHTML = '';
+  grid.textContent = '';
 
   const isScheduled = state.scheduleEnabled || false;
   const warningBanner = document.getElementById('schedule-warning-banner');
@@ -335,7 +335,7 @@ function renderSchedule() {
   if (!modes.length) {
     configContainer.style.display = 'none';
     noModesContainer.style.display = 'block';
-    select.innerHTML = '';
+    select.textContent = '';
     return;
   }
 
@@ -343,7 +343,13 @@ function renderSchedule() {
   noModesContainer.style.display = 'none';
 
   // Populate modes dropdown
-  select.innerHTML = modes.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+  select.textContent = '';
+  modes.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m.id;
+    opt.textContent = m.name;
+    select.appendChild(opt);
+  });
 
   // Fallback to active mode or first mode if scheduleModeId is invalid or null
   if (!scheduleModeId || !modes.some(m => m.id === scheduleModeId)) {
@@ -367,7 +373,7 @@ function renderSchedule() {
 
   // Render Calendar Grid
   const grid = document.getElementById('calendar-map-grid');
-  grid.innerHTML = '';
+  grid.textContent = '';
 
   // 1. Render Hours Header Row
   const emptyHeader = document.createElement('div');
@@ -853,56 +859,114 @@ async function renderAnalytics() {
     : [];
 
   if (!activeMode) {
-    container.innerHTML = `<p class="analytics-empty">No active mode selected. Activate a mode from the Block List tab to see timer data.</p>`;
+    container.textContent = '';
+    const p = document.createElement('p');
+    p.className = 'analytics-empty';
+    p.textContent = 'No active mode selected. Activate a mode from the Block List tab to see timer data.';
+    container.appendChild(p);
     return;
   }
 
   if (timedEntries.length === 0) {
-    container.innerHTML = `<p class="analytics-empty">No timed sites in the <strong>${activeMode.name}</strong> mode. Add entries in the format <code>domain; minutes</code> to track daily usage.</p>`;
+    container.textContent = '';
+    const p = document.createElement('p');
+    p.className = 'analytics-empty';
+    p.textContent = 'No timed sites in the ';
+    const strong = document.createElement('strong');
+    strong.textContent = activeMode.name;
+    const endText = document.createTextNode(' mode. Add entries in the format ');
+    const code = document.createElement('code');
+    code.textContent = 'domain; minutes';
+    const endText2 = document.createTextNode(' to track daily usage.');
+    
+    p.appendChild(strong);
+    p.appendChild(endText);
+    p.appendChild(code);
+    p.appendChild(endText2);
+    container.appendChild(p);
     return;
   }
 
   const today = new Date().toISOString().slice(0, 10);
 
-  const rows = timedEntries.map(entry => {
+  container.textContent = '';
+  
+  const modeLabel = document.createElement('div');
+  modeLabel.className = 'analytics-mode-label';
+  modeLabel.textContent = 'Active mode: ';
+  const strongMode = document.createElement('strong');
+  strongMode.textContent = activeMode.name;
+  modeLabel.appendChild(strongMode);
+  container.appendChild(modeLabel);
+
+  const fmt = ms => {
+    const totalSec = Math.floor(ms / 1000);
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    if (h > 0) return `${h}h ${m}m`;
+    if (m > 0) return `${m}m ${s}s`;
+    return `${s}s`;
+  };
+
+  timedEntries.forEach(entry => {
     const limitMs  = entry.limitMinutes * 60 * 1000;
     const rec      = siteTimers[entry.domain];
     const usedMs   = (rec && rec.date === today) ? (rec.usedMs || 0) : 0;
     const remMs    = Math.max(0, limitMs - usedMs);
     const pct      = Math.min(100, Math.round((usedMs / limitMs) * 100));
 
-    const fmt = ms => {
-      const totalSec = Math.floor(ms / 1000);
-      const h = Math.floor(totalSec / 3600);
-      const m = Math.floor((totalSec % 3600) / 60);
-      const s = totalSec % 60;
-      if (h > 0) return `${h}h ${m}m`;
-      if (m > 0) return `${m}m ${s}s`;
-      return `${s}s`;
-    };
-
     const statusClass = pct >= 100 ? 'timer-bar-full' : pct >= 75 ? 'timer-bar-warn' : '';
 
-    return `
-      <div class="analytics-card">
-        <div class="analytics-card-header">
-          <span class="analytics-domain">${entry.domain}</span>
-          <span class="analytics-limit">${entry.limitMinutes} min / day</span>
-        </div>
-        <div class="analytics-bar-track">
-          <div class="analytics-bar-fill ${statusClass}" style="width:${pct}%"></div>
-        </div>
-        <div class="analytics-card-footer">
-          <span class="analytics-used">Used: ${fmt(usedMs)}</span>
-          <span class="analytics-remaining ${pct >= 100 ? 'analytics-exhausted' : ''}">${pct >= 100 ? 'Blocked' : fmt(remMs) + ' left'}</span>
-        </div>
-      </div>`;
-  });
+    // Create .analytics-card
+    const card = document.createElement('div');
+    card.className = 'analytics-card';
 
-  container.innerHTML = `
-    <div class="analytics-mode-label">Active mode: <strong>${activeMode.name}</strong></div>
-    ${rows.join('')}
-  `;
+    // Header
+    const header = document.createElement('div');
+    header.className = 'analytics-card-header';
+    
+    const domainSpan = document.createElement('span');
+    domainSpan.className = 'analytics-domain';
+    domainSpan.textContent = entry.domain;
+    
+    const limitSpan = document.createElement('span');
+    limitSpan.className = 'analytics-limit';
+    limitSpan.textContent = `${entry.limitMinutes} min / day`;
+    
+    header.appendChild(domainSpan);
+    header.appendChild(limitSpan);
+
+    // Bar track
+    const barTrack = document.createElement('div');
+    barTrack.className = 'analytics-bar-track';
+    
+    const barFill = document.createElement('div');
+    barFill.className = `analytics-bar-fill ${statusClass}`.trim();
+    barFill.style.width = `${pct}%`;
+    barTrack.appendChild(barFill);
+
+    // Footer
+    const footer = document.createElement('div');
+    footer.className = 'analytics-card-footer';
+    
+    const usedSpan = document.createElement('span');
+    usedSpan.className = 'analytics-used';
+    usedSpan.textContent = `Used: ${fmt(usedMs)}`;
+    
+    const remainingSpan = document.createElement('span');
+    remainingSpan.className = 'analytics-remaining' + (pct >= 100 ? ' analytics-exhausted' : '');
+    remainingSpan.textContent = pct >= 100 ? 'Blocked' : `${fmt(remMs)} left`;
+    
+    footer.appendChild(usedSpan);
+    footer.appendChild(remainingSpan);
+
+    card.appendChild(header);
+    card.appendChild(barTrack);
+    card.appendChild(footer);
+    
+    container.appendChild(card);
+  });
 }
 
 function renderPasswordSettings() {
