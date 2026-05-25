@@ -3,23 +3,23 @@
 
 /* ===== THEME VARIABLES ===== */
 :root {
-  /* Monochrome Clean Palette - Light Theme */
-  --bg-primary: #f5f5f5;       /* Modern light gray background */
-  --bg-card: #ffffff;          /* Pure white cards */
-  --bg-sidebar: #000000;       /* Solid black for sidebar */
-  --text-primary: #000000;     /* Pitch black for main text */
-  --text-secondary: #555555;   /* Dark gray for subtitles/labels */
-  --text-sidebar: #aaaaaa;     /* Gray for sidebar text */
-  --text-sidebar-active: #ffffff; /* White for active nav */
-  --bg-sidebar-active: #111111; /* Dark gray active nav background */
-  --border-color: #000000;     /* Bold black borders */
-  --focus-ring: rgba(0, 0, 0, 0.08); /* Soft black focus ring shadow */
-  --accent-color: #000000;     /* Accent black */
-  --btn-bg: #ffffff;           /* White for buttons */
-  --btn-text: #000000;         /* Black for button text */
-  --btn-hover-bg: #000000;     /* Black hover background */
+  /* Teal & White Palette - Light Theme */
+  --bg-primary: #f5f5f5;       /* Neutral soft white shade 2 */
+  --bg-card: #ffffff;          /* Pure white shade 1 */
+  --bg-sidebar: #ffffff;       /* Pure white shade 1 for sidebar */
+  --text-primary: #115e59;     /* Deep/dark teal for high-contrast primary text */
+  --text-secondary: #4c7a7a;   /* Soft teal-gray for subtitles/labels */
+  --text-sidebar: #4c7a7a;     /* Soft teal-gray for inactive sidebar nav text */
+  --text-sidebar-active: #0d9488; /* Rich teal for active sidebar nav text */
+  --bg-sidebar-active: #f5f5f5; /* Neutral soft white shade 2 for active nav background */
+  --border-color: #0d9488;     /* Rich teal borders */
+  --focus-ring: rgba(13, 148, 136, 0.15); /* Soft teal focus ring shadow */
+  --accent-color: #0d9488;     /* Accent teal */
+  --btn-bg: #0d9488;           /* Teal background for buttons */
+  --btn-text: #ffffff;         /* White text for buttons */
+  --btn-hover-bg: #0f766e;     /* Darker teal hover background */
   --btn-hover-text: #ffffff;   /* White hover text */
-  --shadow-color: rgba(0, 0, 0, 0.05); /* Soft black shadow */
+  --shadow-color: rgba(13, 148, 136, 0.05); /* Soft teal shadow */
   
   /* Status/Alert colors styled harmoniously */
   --color-success: #10b981;
@@ -29,22 +29,22 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    /* Monochrome Clean Palette - Dark Theme */
-    --bg-primary: #0a0a0a;       /* Pure black background */
-    --bg-card: #111111;          /* Dark gray card background */
-    --bg-sidebar: #000000;       /* Dark sidebar */
-    --text-primary: #ffffff;     /* White text */
-    --text-secondary: #aaaaaa;   /* Gray text */
-    --text-sidebar: #666666;     /* Darker gray sidebar text */
+    /* Teal & White Palette - Dark Theme */
+    --bg-primary: #042f2e;       /* Dark teal-black background */
+    --bg-card: #134e4a;          /* Dark teal card background */
+    --bg-sidebar: #042f2e;       /* Dark teal-black sidebar */
+    --text-primary: #ffffff;     /* Pure white shade 1 text */
+    --text-secondary: #99f6e4;   /* Soft white-teal shade 2 text */
+    --text-sidebar: #99f6e4;     /* Soft white-teal sidebar text */
     --text-sidebar-active: #ffffff;
-    --bg-sidebar-active: #111111;
-    --border-color: #ffffff;     /* Crisp white borders */
-    --focus-ring: rgba(255, 255, 255, 0.15);
-    --accent-color: #ffffff;
-    --btn-bg: #0a0a0a;
+    --bg-sidebar-active: #115e59;
+    --border-color: #14b8a6;     /* Bright teal borders */
+    --focus-ring: rgba(20, 184, 166, 0.25);
+    --accent-color: #14b8a6;
+    --btn-bg: #042f2e;
     --btn-text: #ffffff;
-    --btn-hover-bg: #ffffff;
-    --btn-hover-text: #000000;
+    --btn-hover-bg: #14b8a6;
+    --btn-hover-text: #042f2e;
     --shadow-color: rgba(0, 0, 0, 0.4);
   }
 }
@@ -407,7 +407,6 @@ input:checked + .slider::before {
 .mode-card-name {
   font-size: 1rem;
   font-weight: 700;
-  text-transform: uppercase;
   letter-spacing: 0.4px;
 }
 
@@ -458,7 +457,6 @@ input:checked + .slider::before {
 .mode-editor-name {
   font-size: 1rem;
   font-weight: 700;
-  text-transform: uppercase;
   letter-spacing: 0.5px;
   flex: 1;
   cursor: pointer;
@@ -468,7 +466,6 @@ input:checked + .slider::before {
 .mode-editor-name-input {
   font-size: 1rem;
   font-weight: 700;
-  text-transform: uppercase;
   letter-spacing: 0.5px;
   flex: 1;
   padding: 4px 8px;
@@ -541,7 +538,6 @@ input:checked + .slider::before {
 .analytics-mode-label {
   font-size: 0.88rem;
   font-weight: 700;
-  text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 16px;
   color: var(--text-primary);
@@ -650,7 +646,6 @@ select.schedule-mode-select {
   cursor: pointer;
   outline: none;
   font-weight: 700;
-  text-transform: uppercase;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 

@@ -2,20 +2,22 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg-primary: #f5f5f5;
-  --bg-card: #ffffff;
-  --text-primary: #000000;
-  --text-secondary: #555555;
-  --border-color: #000000;
+  /* Teal & White Palette - Light Theme */
+  --bg-primary: #f5f5f5;       /* Neutral soft white shade 2 */
+  --bg-card: #ffffff;          /* Pure white shade 1 */
+  --text-primary: #115e59;     /* Deep/dark teal for primary text */
+  --text-secondary: #4c7a7a;   /* Soft teal-gray secondary text */
+  --border-color: #0d9488;     /* Rich teal borders */
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg-primary: #0a0a0a;
-    --bg-card: #111111;
-    --text-primary: #ffffff;
-    --text-secondary: #aaaaaa;
-    --border-color: #ffffff;
+    /* Teal & White Palette - Dark Theme */
+    --bg-primary: #042f2e;     /* Dark teal-black background */
+    --bg-card: #134e4a;        /* Dark teal card background */
+    --text-primary: #ffffff;   /* Pure white shade 1 text */
+    --text-secondary: #99f6e4; /* Soft white-teal shade 2 text */
+    --border-color: #14b8a6;   /* Bright teal borders */
   }
 }
 
