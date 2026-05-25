@@ -106,7 +106,6 @@ html, body {
   font-weight: 600;
   cursor: pointer;
   font-family: inherit;
-  text-transform: uppercase;
   letter-spacing: 0.5px;
   transition: all 0.15s;
   border-left: 3px solid transparent;
@@ -212,7 +211,6 @@ textarea { resize: vertical; min-height: 90px; }
   font-size: 0.82rem;
   font-weight: 700;
   font-family: inherit;
-  text-transform: uppercase;
   letter-spacing: 0.5px;
   cursor: pointer;
   border-radius: 6px;
@@ -425,7 +423,8 @@ input:checked + .slider::before {
   letter-spacing: 1px;
   margin-top: 4px;
   padding: 2px 6px;
-  border: 1px solid var(--border-color);
+  border: 1px solid currentColor;
+  border-radius: 4px;
   display: inline-block;
   width: fit-content;
 }
