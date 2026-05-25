@@ -1,15 +1,21 @@
 // ===== UTILITY =====
 function normalizeDomain(input) {
-  const trimmed = input.trim().toLowerCase();
+  let trimmed = input.trim().toLowerCase();
   if (!trimmed) return '';
+  const isAllowlist = trimmed.startsWith('!');
+  if (isAllowlist) {
+    trimmed = trimmed.slice(1).trim();
+  }
   if (trimmed.includes(' ')) return ''; // Spaces are never allowed in domains or keywords!
-  if (!trimmed.includes('.')) return trimmed;
+  if (!trimmed.includes('.')) return isAllowlist ? '!' + trimmed : trimmed;
   try {
     let url = trimmed;
     if (!url.startsWith('http')) url = 'https://' + url;
-    return new URL(url).hostname.replace(/^www\./, '');
+    const host = new URL(url).hostname.replace(/^www\./, '');
+    return isAllowlist ? '!' + host : host;
   } catch {
-    return trimmed.replace(/^www\./, '');
+    const host = trimmed.replace(/^www\./, '');
+    return isAllowlist ? '!' + host : host;
   }
 }
 
@@ -33,9 +39,11 @@ function entryMatches(hostname, entryDomain) {
 
 /** Return the raw entry object { domain, limitMinutes } for this hostname, or null. */
 function findMatchingEntry(hostname, entries) {
+  // Only match against blocklist entries (those that do NOT start with "!")
   return (entries || []).find(e => {
     const d = (typeof e === 'string') ? e : e.domain;
-    return d && entryMatches(hostname, d);
+    if (!d || d.startsWith('!')) return false;
+    return entryMatches(hostname, d);
   }) || null;
 }
 
@@ -105,6 +113,19 @@ async function shouldBlock(url) {
   const req = getDomainFromUrl(url);
   if (!req) return false;
 
+  // 1. Check Allowlist (exceptions starting with "!") first
+  const hasAllowlistMatch = (activeMode.domains || []).some(e => {
+    const d = (typeof e === 'string') ? e : e.domain;
+    if (!d || !d.startsWith('!')) return false;
+    const stripped = d.slice(1);
+    return entryMatches(req, stripped);
+  });
+
+  if (hasAllowlistMatch) {
+    return false; // Match found on allowlist -> ALLOW (do not block)
+  }
+
+  // 2. Otherwise check Blocklist
   const matchedEntry = findMatchingEntry(req, activeMode.domains);
   if (!matchedEntry) return false;
 
@@ -169,14 +190,24 @@ async function updateTracker() {
     if (domain) {
       const activeMode = getActiveModeAtTime(data, Date.now());
       if (activeMode) {
-        const matched = findMatchingEntry(domain, activeMode.domains);
-        if (matched) {
-          const entry = typeof matched === 'string' ? { domain: matched, limitMinutes: null } : matched;
-          if (entry.limitMinutes != null) {
-            activeDomain = entry.domain;
-            activeTabId = activeTab.id;
-            limitMinutes = entry.limitMinutes;
-            activeTabUrl = activeTab.url;
+        // First check if domain matches any allowlist entries:
+        const isAllowed = (activeMode.domains || []).some(e => {
+          const d = (typeof e === 'string') ? e : e.domain;
+          if (!d || !d.startsWith('!')) return false;
+          const stripped = d.slice(1);
+          return entryMatches(domain, stripped);
+        });
+
+        if (!isAllowed) {
+          const matched = findMatchingEntry(domain, activeMode.domains);
+          if (matched) {
+            const entry = typeof matched === 'string' ? { domain: matched, limitMinutes: null } : matched;
+            if (entry.limitMinutes != null) {
+              activeDomain = entry.domain;
+              activeTabId = activeTab.id;
+              limitMinutes = entry.limitMinutes;
+              activeTabUrl = activeTab.url;
+            }
           }
         }
       }

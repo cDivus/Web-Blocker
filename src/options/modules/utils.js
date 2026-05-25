@@ -1,16 +1,22 @@
 // ===== UTILS & HELPERS =====
 
 export function normalizeDomain(raw) {
-  const trimmed = raw.trim().toLowerCase();
+  let trimmed = raw.trim().toLowerCase();
   if (!trimmed) return '';
+  const isAllowlist = trimmed.startsWith('!');
+  if (isAllowlist) {
+    trimmed = trimmed.slice(1).trim();
+  }
   if (trimmed.includes(' ')) return ''; // Spaces are never allowed in domains or keywords!
-  if (!trimmed.includes('.')) return trimmed; // keyword
+  if (!trimmed.includes('.')) return isAllowlist ? '!' + trimmed : trimmed; // keyword
   try {
     let url = trimmed;
     if (!url.startsWith('http')) url = 'https://' + url;
-    return new URL(url).hostname.replace(/^www\./, '');
+    const host = new URL(url).hostname.replace(/^www\./, '');
+    return isAllowlist ? '!' + host : host;
   } catch {
-    return trimmed.replace(/^www\./, '');
+    const host = trimmed.replace(/^www\./, '');
+    return isAllowlist ? '!' + host : host;
   }
 }
 
