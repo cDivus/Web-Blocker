@@ -335,7 +335,6 @@ input:checked + .slider::before {
   color: var(--text-primary);
   font-size: 0.76rem;
   font-weight: 700;
-  text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 20px;
   border-radius: 0 8px 8px 0;
