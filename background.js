@@ -96,8 +96,8 @@ async function addTimerUsage(domain, ms) {
 }
 
 // ===== STORAGE =====
-const get = keys => new Promise(r => chrome.storage.local.get(keys, r));
-const set = data  => new Promise(r => chrome.storage.local.set(data, r));
+const get = keys => chrome.storage.local.get(keys);
+const set = data  => chrome.storage.local.set(data);
 
 // ===== BLOCKING LOGIC =====
 async function shouldBlock(url) {
@@ -316,18 +316,21 @@ chrome.alarms.onAlarm.addListener(async ({ name }) => {
 
 // ===== MESSAGES =====
 chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
-  handle(msg, reply);
+  handle(msg).then(reply).catch(err => {
+    console.error('Error handling message:', err);
+    reply({ ok: false, error: err.message });
+  });
   return true;
 });
 
-async function handle(msg, reply) {
+async function handle(msg) {
   const { action } = msg;
 
   if (action === 'getState') {
     const data = await get(['enabled','modes','activeModeId','globalSchedule',
       'tempUnblocks','blockPageContent','scheduleEnabled','password',
       'blockPageType','customBlockHtml','customBlockAssets','customBlockName']);
-    reply({ ...data, enabled: data.enabled !== false });
+    return { ...data, enabled: data.enabled !== false };
 
   } else if (action === 'getTimers') {
     const data = await get(['siteTimers', 'currentTracker']);
@@ -342,16 +345,16 @@ async function handle(msg, reply) {
         timers[tracker.domain] = { date: today, usedMs: prevMs + elapsed };
       }
     }
-    reply({ siteTimers: timers });
+    return { siteTimers: timers };
 
   } else if (action === 'getModes') {
     const data = await get(['modes', 'activeModeId']);
-    reply({ modes: data.modes || [], activeModeId: data.activeModeId || null });
+    return { modes: data.modes || [], activeModeId: data.activeModeId || null };
 
   } else if (action === 'setActiveMode') {
     await set({ activeModeId: msg.modeId || null });
     await updateTracker();
-    reply({ ok: true });
+    return { ok: true };
 
   } else if (action === 'createMode') {
     const data = await get(['modes']);
@@ -361,7 +364,7 @@ async function handle(msg, reply) {
     const mode = { id: 'mode_' + Date.now(), name: msg.name, builtin: false, domains: [], color: assignedColor };
     modes.push(mode);
     await set({ modes });
-    reply({ ok: true, mode, modes });
+    return { ok: true, mode, modes };
 
   } else if (action === 'deleteMode') {
     const data = await get(['modes', 'activeModeId']);
@@ -370,45 +373,45 @@ async function handle(msg, reply) {
     if (data.activeModeId === msg.modeId) upd.activeModeId = null;
     await set(upd);
     await updateTracker();
-    reply({ ok: true, modes });
+    return { ok: true, modes };
 
   } else if (action === 'renameMode') {
     const data = await get(['modes']);
     const modes = data.modes || [];
     const idx = modes.findIndex(m => m.id === msg.modeId);
     if (idx !== -1) { modes[idx].name = msg.name; await set({ modes }); }
-    reply({ ok: true });
+    return { ok: true };
 
   } else if (action === 'setPassword') {
     await set({ password: msg.password || '' });
-    reply({ ok: true });
+    return { ok: true };
 
   } else if (action === 'setModeDomains') {
     const data = await get(['modes']);
     const modes = data.modes || [];
     const idx = modes.findIndex(m => m.id === msg.modeId);
-    if (idx === -1) { reply({ ok: false }); return; }
+    if (idx === -1) { return { ok: false }; }
     modes[idx].domains = (msg.domains || []).map(d =>
       typeof d === 'string' ? { domain: d, limitMinutes: null } : d
     );
     await set({ modes });
     await updateTracker();
-    reply({ ok: true });
+    return { ok: true };
 
   } else if (action === 'addDomain') {
     const domain = normalizeDomain(msg.domain);
-    if (!domain) { reply({ ok: false, error: 'Invalid domain' }); return; }
+    if (!domain) { return { ok: false, error: 'Invalid domain' }; }
     const data = await get(['modes', 'activeModeId']);
     const modes = data.modes || [];
     const idx = modes.findIndex(m => m.id === data.activeModeId);
-    if (idx === -1) { reply({ ok: false, error: 'No active mode' }); return; }
+    if (idx === -1) { return { ok: false, error: 'No active mode' }; }
     const alreadyExists = modes[idx].domains.some(e =>
       (typeof e === 'string' ? e : e.domain) === domain
     );
     if (!alreadyExists) modes[idx].domains.push({ domain, limitMinutes: null });
     await set({ modes });
     await updateTracker();
-    reply({ ok: true, domain, mode: modes[idx] });
+    return { ok: true, domain, mode: modes[idx] };
 
   } else if (action === 'setGlobalSchedule') {
     const upd = { scheduleEnabled: msg.enabled, globalSchedule: msg.globalSchedule || {} };
@@ -417,7 +420,7 @@ async function handle(msg, reply) {
     }
     await set(upd);
     await updateTracker();
-    reply({ ok: true });
+    return { ok: true };
 
   } else if (action === 'saveBlockPage') {
     if (msg.type === 'custom') {
@@ -433,11 +436,11 @@ async function handle(msg, reply) {
         blockPageContent: msg.content
       });
     }
-    reply({ ok: true });
+    return { ok: true };
 
   } else if (action === 'getCurrentTab') {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    reply({ url: tab ? tab.url : null });
+    return { url: tab ? tab.url : null };
   }
 }
 
