@@ -329,7 +329,8 @@ async function handle(msg) {
   if (action === 'getState') {
     const data = await get(['enabled','modes','activeModeId','globalSchedule',
       'tempUnblocks','blockPageContent','scheduleEnabled','password',
-      'blockPageType','customBlockHtml','customBlockAssets','customBlockName']);
+      'blockPageType','customBlockHtml','customBlockAssets','customBlockName',
+      'blockPageUseQuotes']);
     return { ...data, enabled: data.enabled !== false };
 
   } else if (action === 'getTimers') {
@@ -433,7 +434,8 @@ async function handle(msg) {
     } else {
       await set({
         blockPageType: 'default',
-        blockPageContent: msg.content
+        blockPageContent: msg.content,
+        blockPageUseQuotes: msg.useQuotes || false
       });
     }
     return { ok: true };

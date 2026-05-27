@@ -6,6 +6,7 @@ export function renderBlockPage() {
   // Load original states
   store.originalBlockPageType = store.state.blockPageType || 'default';
   store.originalBlockPageText = store.state.blockPageContent || 'You blocked this site for a reason.';
+  store.originalBlockPageUseQuotes = store.state.blockPageUseQuotes || false;
   store.originalCustomHtml = store.state.customBlockHtml || '';
   store.originalCustomAssets = store.state.customBlockAssets || {};
   store.originalCustomName = store.state.customBlockName || '';
@@ -19,8 +20,16 @@ export function renderBlockPage() {
   // Set default message inputs
   const textarea = document.getElementById('block-page-content');
   const preview = document.getElementById('preview-box');
-  if (textarea) textarea.value = store.originalBlockPageText;
-  if (preview) preview.textContent = store.originalBlockPageText;
+  const checkbox = document.getElementById('block-page-use-quotes');
+
+  if (checkbox) checkbox.checked = store.originalBlockPageUseQuotes;
+  if (textarea) {
+    textarea.value = store.originalBlockPageText;
+    textarea.disabled = store.originalBlockPageUseQuotes;
+  }
+  if (preview) {
+    preview.textContent = store.originalBlockPageUseQuotes ? '“Committing to nothing makes you distracted by everything.” — Quotes Option Active' : store.originalBlockPageText;
+  }
 
   // Set custom file names
   const fileNameEl = document.getElementById('blockpage-file-name');
@@ -101,7 +110,10 @@ export function checkBlockPageSaveStatus() {
     } else {
       const textarea = document.getElementById('block-page-content');
       const currentText = textarea ? textarea.value : '';
-      btnSave.disabled = (currentText === store.originalBlockPageText);
+      const checkbox = document.getElementById('block-page-use-quotes');
+      const currentUseQuotes = checkbox ? checkbox.checked : false;
+
+      btnSave.disabled = (currentText === store.originalBlockPageText && currentUseQuotes === store.originalBlockPageUseQuotes);
     }
   }
 }
@@ -315,6 +327,22 @@ export function setupBlockPageListeners() {
     });
   }
 
+  const useQuotesEl = document.getElementById('block-page-use-quotes');
+  if (useQuotesEl) {
+    useQuotesEl.addEventListener('change', e => {
+      const checked = e.target.checked;
+      const textarea = document.getElementById('block-page-content');
+      if (textarea) {
+        textarea.disabled = checked;
+      }
+      const preview = document.getElementById('preview-box');
+      if (preview) {
+        preview.textContent = checked ? '“Committing to nothing makes you distracted by everything.” — Quotes Option Active' : (textarea ? textarea.value : 'You blocked this site for a reason.');
+      }
+      checkBlockPageSaveStatus();
+    });
+  }
+
   document.getElementById('btn-save-blockpage').addEventListener('click', async () => {
     if (store.currentBlockPageType === 'custom') {
       const html = store.tempCustomHtml !== null ? store.tempCustomHtml : store.originalCustomHtml;
@@ -333,12 +361,15 @@ export function setupBlockPageListeners() {
       store.state.customBlockName = name;
     } else {
       const content = document.getElementById('block-page-content').value;
+      const useQuotes = document.getElementById('block-page-use-quotes').checked;
       await sendMsg('saveBlockPage', {
         type: 'default',
-        content
+        content,
+        useQuotes
       });
       store.state.blockPageType = 'default';
       store.state.blockPageContent = content;
+      store.state.blockPageUseQuotes = useQuotes;
     }
     renderBlockPage();
   });

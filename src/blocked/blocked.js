@@ -115,7 +115,7 @@ function compileCustomBlockPage(html, assets) {
 }
 
 // Load custom block page message or custom ZIP/HTML template
-chrome.storage.local.get(['blockPageContent', 'blockPageType', 'customBlockHtml', 'customBlockAssets'], (data) => {
+chrome.storage.local.get(['blockPageContent', 'blockPageType', 'customBlockHtml', 'customBlockAssets', 'blockPageUseQuotes'], (data) => {
   document.title = `Blocked — ${blockedDomain || 'Web Blocker'}`;
 
   if (data.blockPageType === 'custom' && data.customBlockHtml) {
@@ -133,8 +133,32 @@ chrome.storage.local.get(['blockPageContent', 'blockPageType', 'customBlockHtml'
   }
 
   // Fallback to default message-based blocker
-  const msg = (data.blockPageContent || '').trim();
-  if (msg) {
-    document.getElementById('block-message').textContent = msg;
+  if (data.blockPageUseQuotes) {
+    const quotes = [
+      { text: "Deep work is not a chore. It is a highly satisfying flow state.", author: "Cal Newport" },
+      { text: "Distractions are temporary escapes. Your ambitions are permanent.", author: "Unknown" },
+      { text: "Only in quiet waters can things reflect undistorted.", author: "Chinese Proverb" },
+      { text: "You will never reach your destination if you stop to throw stones at every dog that barks.", author: "Winston Churchill" },
+      { text: "If you commit to nothing, you’ll be distracted by everything.", author: "James Clear" },
+      { text: "Distraction is the only thing that stands between you and your goals.", author: "Unknown" },
+      { text: "It is not that we have so little time but that we lose so much. The life we receive is not short but we make it so.", author: "Seneca" },
+      { text: "The shorter way to do many things is to only do one thing at a time.", author: "Samuel Smiles" },
+      { text: "Time is what we want most, but what we use worst.", author: "William Penn" },
+      { text: "You have power over your mind—not outside events. Realize this, and you will find strength.", author: "Marcus Aurelius" },
+      { text: "Discipline is choosing between what you want now and what you want most.", author: "Abraham Lincoln" },
+      { text: "The successful warrior is the average man, with laser-like focus.", author: "Bruce Lee" },
+      { text: "Freedom is secured not by the fulfilling of men's desires, but by the removal of desire.", author: "Epictetus" }
+    ];
+    const rand = quotes[Math.floor(Math.random() * quotes.length)];
+    const el = document.getElementById('block-message');
+    if (el) {
+      el.innerHTML = `<span style="font-size: 1.35rem; font-style: italic; font-weight: 400; display: block; margin-bottom: 8px;">“${rand.text}”</span><span style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); display: block; opacity: 0.8;">— ${rand.author}</span>`;
+    }
+  } else {
+    const msg = (data.blockPageContent || '').trim();
+    if (msg) {
+      const el = document.getElementById('block-message');
+      if (el) el.textContent = msg;
+    }
   }
 });
