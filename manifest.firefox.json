@@ -48,7 +48,7 @@
   },
   "browser_specific_settings": {
     "gecko": {
-      "id": "web-blocker-dev@snraw",
+      "id": "web-blocker-timer@snraw",
       "strict_min_version": "142.0",
       "data_collection_permissions": {
         "required": [
