@@ -7,6 +7,11 @@ import { renderBlockPage, setupBlockPageListeners } from './modules/blockpage.js
 import { renderAnalytics } from './modules/analytics.js';
 import { renderPasswordSettings, setupPasswordListeners } from './modules/password.js';
 
+// Apply theme immediately on script load
+chrome.storage.local.get('theme', (data) => {
+  document.documentElement.setAttribute('data-theme', data.theme || 'teal');
+});
+
 // ===== INIT =====
 document.addEventListener('DOMContentLoaded', async () => {
   // Load global state
@@ -39,6 +44,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupBlockPageListeners();
   setupPasswordListeners();
   setupGlobalListeners();
+  setupThemeListeners();
 
   // Render all active components
   renderModes();
@@ -46,6 +52,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderBlockPage();
   renderAnalytics();
   renderPasswordSettings();
+  renderThemeSettings();
   
   // Visibility change logic to stop/start polling
   document.addEventListener('visibilitychange', () => {
@@ -105,7 +112,8 @@ function setupGlobalListeners() {
       activeModeId: null,
       globalSchedule: {},
       scheduleEnabled: false,
-      tempUnblocks: {}, siteTimers: {}
+      tempUnblocks: {}, siteTimers: {},
+      theme: 'teal'
     });
     
     // Refresh local memory
@@ -118,8 +126,56 @@ function setupGlobalListeners() {
     renderBlockPage();
     renderAnalytics();
     renderPasswordSettings();
+    await renderThemeSettings();
 
     const editor = document.getElementById('mode-editor');
     if (editor) editor.style.display = 'none';
+  });
+}
+
+// ===== THEME CONTROLS =====
+async function renderThemeSettings() {
+  const data = await chrome.storage.local.get('theme');
+  const activeTheme = data.theme || 'teal';
+  
+  // Set attribute on document element
+  document.documentElement.setAttribute('data-theme', activeTheme);
+  
+  const btnTeal = document.getElementById('btn-theme-teal');
+  const btnMonochrome = document.getElementById('btn-theme-monochrome');
+  
+  if (btnTeal && btnMonochrome) {
+    if (activeTheme === 'teal') {
+      btnTeal.classList.add('active');
+      btnMonochrome.classList.remove('active');
+    } else {
+      btnTeal.classList.remove('active');
+      btnMonochrome.classList.add('active');
+    }
+  }
+}
+
+function setupThemeListeners() {
+  const btnTeal = document.getElementById('btn-theme-teal');
+  const btnMonochrome = document.getElementById('btn-theme-monochrome');
+  
+  if (btnTeal) {
+    btnTeal.addEventListener('click', async () => {
+      await chrome.storage.local.set({ theme: 'teal' });
+      await renderThemeSettings();
+    });
+  }
+  
+  if (btnMonochrome) {
+    btnMonochrome.addEventListener('click', async () => {
+      await chrome.storage.local.set({ theme: 'monochrome' });
+      await renderThemeSettings();
+    });
+  }
+
+  chrome.storage.onChanged.addListener((changes) => {
+    if (changes.theme) {
+      renderThemeSettings();
+    }
   });
 }

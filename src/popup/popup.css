@@ -1,6 +1,6 @@
 * { box-sizing: border-box; }
 
-:root {
+:root, html[data-theme="teal"] {
   /* Teal & White Palette - Light Theme */
   --bg-primary: #f5f5f5;       /* Neutral soft white shade 2 */
   --bg-header: #ffffff;        /* Pure white shade 1 for header */
@@ -20,8 +20,28 @@
   --shadow-color: rgba(13, 148, 136, 0.05);
 }
 
+html[data-theme="monochrome"] {
+  /* Monochrome Clean Palette - Light Theme */
+  --bg-primary: #f5f5f5;       /* Modern light gray background */
+  --bg-header: #000000;        /* Solid black for header */
+  --text-primary: #000000;     /* Pitch black for main text */
+  --text-header: #ffffff;      /* White for header text */
+  --border-color: #000000;     /* Bold black borders */
+  --text-secondary: #555555;   /* Dark gray for secondary text */
+  --btn-bg: #ffffff;           /* White background for buttons */
+  --btn-text: #000000;         /* Black text for buttons */
+  --btn-hover-bg: #000000;     /* Black hover background */
+  --btn-hover-text: #ffffff;   /* White hover text */
+  --accent-color: #000000;     /* Accent black */
+  --bg-track: #ffffff;         /* Pure white shade 1 for progress tracks */
+  
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --shadow-color: rgba(0, 0, 0, 0.05);
+}
+
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root, html[data-theme="teal"] {
     /* Teal & White Palette - Dark Theme */
     --bg-primary: #042f2e;     /* Dark teal-black background */
     --bg-header: #134e4a;      /* Dark teal header */
@@ -35,6 +55,23 @@
     --btn-hover-text: #042f2e;
     --accent-color: #14b8a6;
     --bg-track: #134e4a;
+    --shadow-color: rgba(0, 0, 0, 0.4);
+  }
+
+  html[data-theme="monochrome"] {
+    /* Monochrome Clean Palette - Dark Theme */
+    --bg-primary: #0a0a0a;     /* Pure black background */
+    --bg-header: #000000;      /* Dark header */
+    --text-primary: #ffffff;   /* White text */
+    --text-header: #ffffff;    /* White header text */
+    --border-color: #ffffff;   /* Crisp white borders */
+    --text-secondary: #aaaaaa; /* Gray text */
+    --btn-bg: #0a0a0a;
+    --btn-text: #ffffff;
+    --btn-hover-bg: #ffffff;
+    --btn-hover-text: #000000;
+    --accent-color: #ffffff;
+    --bg-track: #111111;
     --shadow-color: rgba(0, 0, 0, 0.4);
   }
 }

@@ -13,6 +13,18 @@ function normalizeDomain(input) {
   }
 }
 
+// Apply theme immediately on script load
+chrome.storage.local.get('theme', (data) => {
+  document.documentElement.setAttribute('data-theme', data.theme || 'teal');
+});
+
+// Live theme listener
+chrome.storage.onChanged.addListener((changes) => {
+  if (changes.theme) {
+    document.documentElement.setAttribute('data-theme', changes.theme.newValue || 'teal');
+  }
+});
+
 // Parse blocked URL from query string
 const params = new URLSearchParams(window.location.search);
 const blockedUrl = params.get('blocked') || '';

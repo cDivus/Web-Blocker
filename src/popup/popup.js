@@ -12,6 +12,18 @@ function normalizeDomain(input) {
   }
 }
 
+// Apply theme immediately on script load
+chrome.storage.local.get('theme', (data) => {
+  document.documentElement.setAttribute('data-theme', data.theme || 'teal');
+});
+
+// Live theme listener
+chrome.storage.onChanged.addListener((changes) => {
+  if (changes.theme) {
+    document.documentElement.setAttribute('data-theme', changes.theme.newValue || 'teal');
+  }
+});
+
 function sendMsg(action, data = {}) {
   return new Promise(resolve => {
     chrome.runtime.sendMessage({ action, ...data }, response => {
