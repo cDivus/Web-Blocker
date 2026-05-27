@@ -54,7 +54,7 @@ function compileCustomBlockPage(html, assets) {
     }
     // Clean leading ./ or /
     const cleanRef = ref.replace(/^\.\//, '').replace(/^\//, '').toLowerCase();
-    
+
     // Look for exact match
     for (let key in assets) {
       if (key.toLowerCase() === cleanRef) {
@@ -91,7 +91,7 @@ function compileCustomBlockPage(html, assets) {
 
   // Strip scripts strictly for security
   doc.querySelectorAll('script').forEach(tag => tag.remove());
-  
+
   // Defense-in-depth: strip inline event handlers and javascript: protocol URIs on all elements
   doc.querySelectorAll('*').forEach(el => {
     for (let i = el.attributes.length - 1; i >= 0; i--) {

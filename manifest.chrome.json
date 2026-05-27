@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Web Blocker",
+  "name": "Web Blocker & Timer",
   "version": "1.0.0",
   "description": "A simple, powerful website blocker with mode-based blocking, scheduling, and temporary unblock features.",
   "permissions": [

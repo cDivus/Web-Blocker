@@ -116,10 +116,10 @@
               <div class="calendar-map-legend"
                 style="margin-top: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
                 <div style="display: flex; gap: 8px;">
-                  <button class="btn" id="btn-calendar-clear"
-                    style="padding: 6px 12px; font-size: 0.75rem;">Clear All</button>
-                  <button class="btn" id="btn-calendar-weekdays"
-                    style="padding: 6px 12px; font-size: 0.75rem;">Weekdays (9-5)</button>
+                  <button class="btn" id="btn-calendar-clear" style="padding: 6px 12px; font-size: 0.75rem;">Clear
+                    All</button>
+                  <button class="btn" id="btn-calendar-weekdays" style="padding: 6px 12px; font-size: 0.75rem;">Weekdays
+                    (9-5)</button>
                 </div>
                 <div id="calendar-modes-legend" style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
                 </div>
@@ -142,7 +142,8 @@
         <!-- Template Toggle -->
         <div class="field-label">Template Type</div>
         <div style="display: flex; gap: 12px; margin-bottom: 20px;">
-          <button class="btn btn-active-toggle" id="btn-blockpage-type-default" style="flex: 1;">Default Message</button>
+          <button class="btn btn-active-toggle" id="btn-blockpage-type-default" style="flex: 1;">Default
+            Message</button>
           <button class="btn" id="btn-blockpage-type-custom" style="flex: 1;">Custom ZIP / HTML</button>
         </div>
 
@@ -158,17 +159,22 @@
           <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 16px;">
             <input type="file" id="blockpage-file-input" accept=".zip, .html, .htm" style="display: none;" />
             <button class="btn" id="btn-blockpage-file-select">Choose File</button>
-            <span id="blockpage-file-name" style="font-size: 0.85rem; font-style: italic; color: #555; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px;">No file selected</span>
+            <span id="blockpage-file-name"
+              style="font-size: 0.85rem; font-style: italic; color: #555; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px;">No
+              file selected</span>
           </div>
-          <div class="schedule-warning-banner" style="margin-bottom: 20px; font-weight: 500; font-size: 0.85rem; border-color: #000000; color: #000000; background: #fafafa;">
-            Upload a single <strong>.html</strong> file or a <strong>.zip</strong> containing an <strong>index.html</strong> file. 
+          <div class="schedule-warning-banner"
+            style="margin-bottom: 20px; font-weight: 500; font-size: 0.85rem; border-color: #000000; color: #000000; background: #fafafa;">
+            Upload a single <strong>.html</strong> file or a <strong>.zip</strong> containing an
+            <strong>index.html</strong> file.
             Scripts are disabled for security.
           </div>
-          
+
           <div id="custom-preview-container" style="display: none;">
             <div class="field-label">Custom Preview</div>
             <div style="border: 1.5px solid #000000; height: 300px; background: #ffffff; position: relative;">
-              <iframe id="custom-preview-iframe" sandbox="allow-same-origin" style="width: 100%; height: 100%; border: none;"></iframe>
+              <iframe id="custom-preview-iframe" sandbox="allow-same-origin"
+                style="width: 100%; height: 100%; border: none;"></iframe>
             </div>
           </div>
         </div>
@@ -195,7 +201,7 @@
           <div class="danger-card-body" style="flex-grow: 1; margin-right: 16px;">
             <div class="danger-item-title">APP THEME</div>
             <div class="danger-item-desc">Choose a color theme for the app.</div>
-            
+
             <div style="margin-top: 12px; display: flex; gap: 12px;">
               <button class="theme-btn" id="btn-theme-teal">
                 <span class="theme-dot teal"></span>
@@ -216,15 +222,13 @@
             <div class="danger-item-desc" id="password-status-desc">Restrict settings access using a password.</div>
 
             <div id="password-setup-container" style="margin-top: 12px;">
-              <input type="password" id="settings-password-input"
-                class="mode-editor-name-input"
+              <input type="password" id="settings-password-input" class="mode-editor-name-input"
                 style="width: 200px; display: inline-block; padding: 6px 10px; margin-right: 8px;" />
               <button class="btn btn-sm" id="btn-save-password">Set Password</button>
             </div>
 
             <div id="password-active-container" style="margin-top: 12px; display: none;">
-              <input type="password" id="settings-password-remove-input"
-                class="mode-editor-name-input"
+              <input type="password" id="settings-password-remove-input" class="mode-editor-name-input"
                 style="width: 200px; display: inline-block; padding: 6px 10px; margin-right: 8px;" />
               <button class="btn btn-sm btn-danger" id="btn-remove-password">Remove Password</button>
             </div>

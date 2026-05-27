@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Web Blocker",
+  "name": "Web Blocker & Timer",
   "version": "1.0.0",
   "description": "A simple, powerful website blocker with mode-based blocking, scheduling, and temporary unblock features.",
   "permissions": [
@@ -48,7 +48,7 @@
   },
   "browser_specific_settings": {
     "gecko": {
-      "id": "web-blocker@snraw",
+      "id": "web-blocker-dev@snraw",
       "strict_min_version": "142.0",
       "data_collection_permissions": {
         "required": [
