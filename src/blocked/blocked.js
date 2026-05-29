@@ -152,7 +152,27 @@ chrome.storage.local.get(['blockPageContent', 'blockPageType', 'customBlockHtml'
     const rand = quotes[Math.floor(Math.random() * quotes.length)];
     const el = document.getElementById('block-message');
     if (el) {
-      el.innerHTML = `<span style="font-size: 1.35rem; font-style: italic; font-weight: 400; display: block; margin-bottom: 8px;">“${rand.text}”</span><span style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); display: block; opacity: 0.8;">— ${rand.author}</span>`;
+      el.textContent = '';
+      const quoteSpan = document.createElement('span');
+      quoteSpan.style.fontSize = '1.35rem';
+      quoteSpan.style.fontStyle = 'italic';
+      quoteSpan.style.fontWeight = '400';
+      quoteSpan.style.display = 'block';
+      quoteSpan.style.marginBottom = '8px';
+      quoteSpan.textContent = `“${rand.text}”`;
+
+      const authorSpan = document.createElement('span');
+      authorSpan.style.fontSize = '0.8rem';
+      authorSpan.style.fontWeight = '700';
+      authorSpan.style.textTransform = 'uppercase';
+      authorSpan.style.letterSpacing = '0.05em';
+      authorSpan.style.color = 'var(--text-secondary)';
+      authorSpan.style.display = 'block';
+      authorSpan.style.opacity = '0.8';
+      authorSpan.textContent = `— ${rand.author}`;
+
+      el.appendChild(quoteSpan);
+      el.appendChild(authorSpan);
     }
   } else {
     const msg = (data.blockPageContent || '').trim();
