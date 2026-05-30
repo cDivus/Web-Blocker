@@ -312,16 +312,6 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
     await recordTrackerExit(data.currentTracker);
   }
 });
-chrome.idle.onStateChanged.addListener(async (state) => {
-  if (state === 'idle' || state === 'locked') {
-    const data = await get(['currentTracker']);
-    if (data.currentTracker) {
-      await recordTrackerExit(data.currentTracker);
-    }
-  } else if (state === 'active') {
-    await updateTracker();
-  }
-});
 
 // ===== ALARMS =====
 chrome.alarms.onAlarm.addListener(async ({ name }) => {

@@ -5,10 +5,8 @@
   "description": "A simple, powerful website blocker with mode-based blocking, scheduling, and temporary unblock features.",
   "permissions": [
     "storage",
-    "tabs",
     "alarms",
-    "webNavigation",
-    "idle"
+    "webNavigation"
   ],
   "host_permissions": [
     "<all_urls>"
