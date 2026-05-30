@@ -143,9 +143,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       pwdError.style.display = 'none';
       
       // Set a temporary session unlock key so options page lets us in automatically
-      await new Promise(resolve => {
-        chrome.storage.local.set({ sessionUnlocked: true }, resolve);
-      });
+      await chrome.storage.local.set({ sessionUnlocked: true });
     }
 
     chrome.tabs.create({ url: chrome.runtime.getURL('src/options/options.html') });

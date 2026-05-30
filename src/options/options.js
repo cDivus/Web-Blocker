@@ -18,13 +18,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   await refreshState();
 
   // Password Lock screen check
-  const sessionCheck = await new Promise(resolve => {
-    chrome.storage.local.get('sessionUnlocked', resolve);
-  });
+  const sessionCheck = await chrome.storage.local.get('sessionUnlocked');
   const isUnlocked = sessionCheck.sessionUnlocked === true;
-  await new Promise(resolve => {
-    chrome.storage.local.remove('sessionUnlocked', resolve);
-  });
+  await chrome.storage.local.remove('sessionUnlocked');
 
   const lockScreen = document.getElementById('password-lock-screen');
   const layoutEl = document.querySelector('.layout');

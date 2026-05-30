@@ -151,11 +151,7 @@ export function setupScheduleListeners() {
     document.querySelectorAll('.calendar-hour-cell').forEach(cell => {
       if (cell.dataset.modeId === store.scheduleModeId) {
         cell.classList.remove('selected');
-        for (const cls of Array.from(cell.classList)) {
-          if (cls.startsWith('mode-color-')) {
-            cell.classList.remove(cls);
-          }
-        }
+        removeModeColors(cell);
         delete cell.dataset.modeId;
       }
     });
@@ -173,21 +169,13 @@ export function setupScheduleListeners() {
       const hour = parseInt(cell.dataset.hour);
       if (day >= 1 && day <= 5 && hour >= 9 && hour < 17) {
         cell.classList.add('selected');
-        for (const cls of Array.from(cell.classList)) {
-          if (cls.startsWith('mode-color-')) {
-            cell.classList.remove(cls);
-          }
-        }
+        removeModeColors(cell);
         cell.classList.add(`mode-color-${mode.color}`);
         cell.dataset.modeId = store.scheduleModeId;
       } else {
         if (cell.dataset.modeId === store.scheduleModeId) {
           cell.classList.remove('selected');
-          for (const cls of Array.from(cell.classList)) {
-            if (cls.startsWith('mode-color-')) {
-              cell.classList.remove(cls);
-            }
-          }
+          removeModeColors(cell);
           delete cell.dataset.modeId;
         }
       }
@@ -232,23 +220,23 @@ export function setupScheduleListeners() {
 
     if (select) {
       cell.classList.add('selected');
-      for (const cls of Array.from(cell.classList)) {
-        if (cls.startsWith('mode-color-')) {
-          cell.classList.remove(cls);
-        }
-      }
+      removeModeColors(cell);
       cell.classList.add(`mode-color-${mode.color}`);
       cell.dataset.modeId = store.scheduleModeId;
     } else {
       if (cell.dataset.modeId === store.scheduleModeId) {
         cell.classList.remove('selected');
-        for (const cls of Array.from(cell.classList)) {
-          if (cls.startsWith('mode-color-')) {
-            cell.classList.remove(cls);
-          }
-        }
+        removeModeColors(cell);
         delete cell.dataset.modeId;
       }
+    }
+  }
+}
+
+function removeModeColors(cell) {
+  for (const cls of Array.from(cell.classList)) {
+    if (cls.startsWith('mode-color-')) {
+      cell.classList.remove(cls);
     }
   }
 }

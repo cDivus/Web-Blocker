@@ -42,13 +42,10 @@ export function renderBlockPage() {
   toggleBlockPageContainers();
 
   // Load custom preview iframe if it exists
-  const iframe = document.getElementById('custom-preview-iframe');
   const container = document.getElementById('custom-preview-container');
-  if (store.originalBlockPageType === 'custom' && store.originalCustomHtml && iframe && container) {
+  if (store.originalBlockPageType === 'custom' && store.originalCustomHtml && container) {
     try {
-      const compiled = compileCustomBlockPage(store.originalCustomHtml, store.originalCustomAssets);
-      iframe.srcdoc = compiled;
-      container.style.display = 'block';
+      renderCustomPreview(store.originalCustomHtml, store.originalCustomAssets);
     } catch (err) {
       console.error('Failed to load custom block page preview:', err);
     }
@@ -190,6 +187,15 @@ export function compileCustomBlockPage(html, assets) {
   return doc.documentElement.outerHTML;
 }
 
+export function renderCustomPreview(html, assets) {
+  const iframe = document.getElementById('custom-preview-iframe');
+  const container = document.getElementById('custom-preview-container');
+  if (iframe && container) {
+    iframe.srcdoc = compileCustomBlockPage(html, assets);
+    container.style.display = 'block';
+  }
+}
+
 export function setupBlockPageListeners() {
   // Toggle: Default Message
   document.getElementById('btn-blockpage-type-default').addEventListener('click', () => {
@@ -231,13 +237,7 @@ export function setupBlockPageListeners() {
         store.tempCustomName = file.name;
 
         // Render preview
-        const iframe = document.getElementById('custom-preview-iframe');
-        const container = document.getElementById('custom-preview-container');
-        if (iframe && container) {
-          const compiled = compileCustomBlockPage(store.tempCustomHtml, store.tempCustomAssets);
-          iframe.srcdoc = compiled;
-          container.style.display = 'block';
-        }
+        renderCustomPreview(store.tempCustomHtml, store.tempCustomAssets);
         checkBlockPageSaveStatus();
       };
       reader.onerror = () => {
@@ -292,13 +292,7 @@ export function setupBlockPageListeners() {
           store.tempCustomName = file.name;
 
           // Render preview
-          const iframe = document.getElementById('custom-preview-iframe');
-          const container = document.getElementById('custom-preview-container');
-          if (iframe && container) {
-            const compiled = compileCustomBlockPage(store.tempCustomHtml, store.tempCustomAssets);
-            iframe.srcdoc = compiled;
-            container.style.display = 'block';
-          }
+          renderCustomPreview(store.tempCustomHtml, store.tempCustomAssets);
           checkBlockPageSaveStatus();
         } catch (err) {
           console.error(err);
