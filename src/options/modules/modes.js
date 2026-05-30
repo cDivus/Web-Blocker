@@ -128,8 +128,10 @@ export function renderModeEditor() {
       btnActivate.textContent = isActive ? 'Deactivate' : 'Activate';
       if (isActive) {
         btnActivate.classList.add('btn-active-toggle');
+        btnActivate.classList.remove('btn-outline-theme');
       } else {
         btnActivate.classList.remove('btn-active-toggle');
+        btnActivate.classList.add('btn-outline-theme');
       }
     }
   }
