@@ -93,6 +93,17 @@ function setupNav() {
         renderAnalytics();
         store.analyticsInterval = setInterval(renderAnalytics, 1000);
       }
+
+      // Close the open mode editor when switching sections
+      store.selectedModeId = null;
+      const editor = document.getElementById('mode-editor');
+      if (editor) editor.style.display = 'none';
+
+      // Also close the new mode inline form if open
+      const newModeForm = document.getElementById('new-mode-form');
+      if (newModeForm) newModeForm.style.display = 'none';
+      const newModeName = document.getElementById('new-mode-name');
+      if (newModeName) newModeName.value = '';
     });
   });
 }
