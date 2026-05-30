@@ -158,23 +158,45 @@ chrome.webNavigation.onBeforeNavigate.addListener(async ({ tabId, frameId, url }
   }
 });
 
+let lastPopupActiveTime = 0;
+
 // ===== REAL-TIME TIMER TRACKING =====
 async function updateTracker() {
-  const [activeTab] = await new Promise(resolve => {
-    chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => {
-      if (chrome.runtime.lastError) resolve([]);
-      else resolve(tabs || []);
-    });
-  });
-
-  const win = await new Promise(resolve => {
+  const lastWin = await new Promise(resolve => {
     chrome.windows.getLastFocused({ populate: false }, (w) => {
       if (chrome.runtime.lastError) resolve(null);
       else resolve(w);
     });
   });
 
-  const isBrowserFocused = win && win.focused;
+  let win = lastWin;
+  let isBrowserFocused = lastWin && lastWin.focused;
+
+  // Override focus if the popup is currently open and active (heartbeat received within last 2.5 seconds)
+  if (Date.now() - lastPopupActiveTime < 2500) {
+    isBrowserFocused = true;
+  }
+
+  // Ensure win points to a normal browser window if browser is focused (ignores popups)
+  if (isBrowserFocused && (!win || win.type !== 'normal')) {
+    const normalWin = await new Promise(resolve => {
+      chrome.windows.getLastFocused({ windowTypes: ['normal'] }, (w) => {
+        if (chrome.runtime.lastError) resolve(null);
+        else resolve(w);
+      });
+    });
+    if (normalWin) {
+      win = normalWin;
+    }
+  }
+
+  const [activeTab] = await new Promise(resolve => {
+    chrome.tabs.query({ active: true, windowId: win ? win.id : undefined }, (tabs) => {
+      if (chrome.runtime.lastError) resolve([]);
+      else resolve(tabs || []);
+    });
+  });
+
   const data = await get(['currentTracker', 'modes', 'activeModeId', 'enabled', 'globalSchedule', 'scheduleEnabled']);
   
   const tracker = data.currentTracker || null;
@@ -334,6 +356,9 @@ async function handle(msg) {
     return { ...data, enabled: data.enabled !== false };
 
   } else if (action === 'getTimers') {
+    lastPopupActiveTime = Date.now();
+    await updateTracker();
+
     const data = await get(['siteTimers', 'currentTracker']);
     const timers = data.siteTimers || {};
     const tracker = data.currentTracker;
