@@ -37,75 +37,110 @@ document.addEventListener('DOMContentLoaded', async () => {
   const state = await sendMsg('getState');
   const countEl = document.getElementById('blocked-count');
 
-  // Show active mode info
-  const modes = state.modes || [];
-  const activeMode = modes.find(m => m.id === state.activeModeId);
+  // Show active mode info (taking schedule into account)
+  const getActiveMode = (s) => {
+    if (s.enabled === false) return null;
+    const modesList = s.modes || [];
+    if (s.scheduleEnabled) {
+      const globalSchedule = s.globalSchedule || {};
+      const now = new Date();
+      const key = `${now.getDay()}-${now.getHours()}`;
+      const scheduledModeId = globalSchedule[key];
+      return modesList.find(m => m.id === scheduledModeId) || null;
+    }
+    return modesList.find(m => m.id === s.activeModeId) || null;
+  };
+
+  const activeMode = getActiveMode(state);
   updateCount(countEl, activeMode);
 
-  // Live active tab timer countdown in Popup
+  // Check tab block & match status
   const currentTabRes = await sendMsg('getCurrentTab');
-  if (currentTabRes && currentTabRes.url && activeMode) {
-    const hostname = normalizeDomain(currentTabRes.url);
-    const entry = (activeMode.domains || []).find(e => {
-      const d = (typeof e === 'string') ? e : e.domain;
-      if (!d) return false;
-      const parts = d.split(',').map(s => s.trim()).filter(Boolean);
-      return parts.some(p => {
-        if (!p.includes('.')) return hostname.includes(p);
-        return hostname === p || hostname.endsWith('.' + p);
+  let matchedEntry = null;
+  let isBlockable = false;
+  let alreadyBlocked = false;
+
+  if (currentTabRes && currentTabRes.url) {
+    const domain = normalizeDomain(currentTabRes.url);
+    if (domain && !/^(chrome|chrome-extension|about|edge):/.test(currentTabRes.url)) {
+      isBlockable = true;
+    }
+
+    if (activeMode && isBlockable) {
+      const hostname = normalizeDomain(currentTabRes.url);
+      matchedEntry = (activeMode.domains || []).find(e => {
+        const d = (typeof e === 'string') ? e : e.domain;
+        if (!d || d.startsWith('!')) return false;
+        const parts = d.split(',').map(s => s.trim()).filter(Boolean);
+        return parts.some(p => {
+          if (!p.includes('.')) return hostname.includes(p);
+          return hostname === p || hostname.endsWith('.' + p);
+        });
       });
-    });
-
-    if (entry && entry.limitMinutes != null) {
-      const timerBox = document.getElementById('active-timer-box');
-      const timerText = document.getElementById('active-timer-text');
-      const timerBar = document.getElementById('active-timer-bar');
-
-      timerBox.style.display = 'flex';
-      document.getElementById('active-timer-target').textContent = entry.domain;
-
-      const updatePopupTimer = async () => {
-        const timersRes = await sendMsg('getTimers');
-        const timers = (timersRes && timersRes.siteTimers) || {};
-        const today = new Date().toISOString().slice(0, 10);
-        const rec = timers[entry.domain];
-        const usedMs = (rec && rec.date === today) ? (rec.usedMs || 0) : 0;
-        const limitMs = entry.limitMinutes * 60 * 1000;
-        const remMs = Math.max(0, limitMs - usedMs);
-
-        const fmt = (ms) => {
-          const s = Math.floor(ms / 1000) % 60;
-          const m = Math.floor(ms / 60000) % 60;
-          const h = Math.floor(ms / 3600000);
-          return `${h > 0 ? h + 'h ' : ''}${m}m ${s}s`;
-        };
-
-        const pct = Math.min(100, (usedMs / limitMs) * 100);
-        timerBar.style.width = pct + '%';
-
-        timerBar.className = 'analytics-bar-fill';
-        if (pct >= 100) {
-          timerBar.classList.add('timer-bar-full');
-          timerText.textContent = 'Blocked';
-        } else if (pct >= 80) {
-          timerBar.classList.add('timer-bar-warn');
-          timerText.textContent = `${fmt(remMs)} left`;
-        } else {
-          timerText.textContent = `${fmt(remMs)} left`;
-        }
-      };
-
-      await updatePopupTimer();
-      const popupInterval = setInterval(updatePopupTimer, 1000);
-
-      window.addEventListener('unload', () => {
-        clearInterval(popupInterval);
-      });
+      if (matchedEntry) {
+        alreadyBlocked = true;
+      }
     }
   }
 
+  // Live active tab timer countdown in Popup
+  if (matchedEntry && matchedEntry.limitMinutes != null) {
+    const timerBox = document.getElementById('active-timer-box');
+    const timerText = document.getElementById('active-timer-text');
+    const timerBar = document.getElementById('active-timer-bar');
+
+    timerBox.style.display = 'flex';
+    document.getElementById('active-timer-target').textContent = matchedEntry.domain;
+
+    const updatePopupTimer = async () => {
+      const timersRes = await sendMsg('getTimers');
+      const timers = (timersRes && timersRes.siteTimers) || {};
+      const today = new Date().toISOString().slice(0, 10);
+      const rec = timers[matchedEntry.domain];
+      const usedMs = (rec && rec.date === today) ? (rec.usedMs || 0) : 0;
+      const limitMs = matchedEntry.limitMinutes * 60 * 1000;
+      const remMs = Math.max(0, limitMs - usedMs);
+
+      const fmt = (ms) => {
+        const s = Math.floor(ms / 1000) % 60;
+        const m = Math.floor(ms / 60000) % 60;
+        const h = Math.floor(ms / 3600000);
+        return `${h > 0 ? h + 'h ' : ''}${m}m ${s}s`;
+      };
+
+      const pct = Math.min(100, (usedMs / limitMs) * 100);
+      timerBar.style.width = pct + '%';
+
+      timerBar.className = 'analytics-bar-fill';
+      if (pct >= 100) {
+        timerBar.classList.add('timer-bar-full');
+        timerText.textContent = 'Blocked';
+      } else if (pct >= 80) {
+        timerBar.classList.add('timer-bar-warn');
+        timerText.textContent = `${fmt(remMs)} left`;
+      } else {
+        timerText.textContent = `${fmt(remMs)} left`;
+      }
+    };
+
+    await updatePopupTimer();
+    const popupInterval = setInterval(updatePopupTimer, 1000);
+
+    window.addEventListener('unload', () => {
+      clearInterval(popupInterval);
+    });
+  }
+
+  const btnBlockCurrent = document.getElementById('btn-block-current');
+  const updateBlockCurrentButton = () => {
+    btnBlockCurrent.disabled = !isBlockable || !activeMode || alreadyBlocked;
+    btnBlockCurrent.textContent = alreadyBlocked ? 'Already Blocked' : 'Block This Site';
+  };
+
+  updateBlockCurrentButton();
+
   // Block current site
-  document.getElementById('btn-block-current').addEventListener('click', async () => {
+  btnBlockCurrent.addEventListener('click', async () => {
     const res = await sendMsg('getCurrentTab');
     if (!res || !res.url) return;
 
@@ -115,6 +150,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const addRes = await sendMsg('addDomain', { domain });
     if (addRes && addRes.ok) {
       updateCount(countEl, addRes.mode);
+      alreadyBlocked = true;
+      updateBlockCurrentButton();
     } else {
       countEl.textContent = 'Enable a mode in Settings first';
     }

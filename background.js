@@ -412,21 +412,43 @@ async function handle(msg) {
     );
     await set({ modes });
     await updateTracker();
+
+    // Redirect matching tabs immediately
+    const tabs = await chrome.tabs.query({});
+    for (const t of tabs) {
+      if (t.url && await shouldBlock(t.url)) {
+        chrome.tabs.update(t.id, { url: chrome.runtime.getURL('src/blocked/blocked.html') + '?blocked=' + encodeURIComponent(t.url) });
+      }
+    }
     return { ok: true };
 
   } else if (action === 'addDomain') {
     const domain = normalizeDomain(msg.domain);
     if (!domain) { return { ok: false, error: 'Invalid domain' }; }
-    const data = await get(['modes', 'activeModeId']);
+    const data = await get(['modes', 'activeModeId', 'globalSchedule', 'scheduleEnabled', 'enabled']);
     const modes = data.modes || [];
-    const idx = modes.findIndex(m => m.id === data.activeModeId);
+    
+    // Detect currently active mode taking scheduling into account
+    const activeMode = getActiveModeAtTime(data, Date.now());
+    if (!activeMode) { return { ok: false, error: 'No active mode' }; }
+    
+    const idx = modes.findIndex(m => m.id === activeMode.id);
     if (idx === -1) { return { ok: false, error: 'No active mode' }; }
+    
     const alreadyExists = modes[idx].domains.some(e =>
       (typeof e === 'string' ? e : e.domain) === domain
     );
     if (!alreadyExists) modes[idx].domains.push({ domain, limitMinutes: null });
     await set({ modes });
     await updateTracker();
+
+    // Redirect matching tabs immediately
+    const tabs = await chrome.tabs.query({});
+    for (const t of tabs) {
+      if (t.url && await shouldBlock(t.url)) {
+        chrome.tabs.update(t.id, { url: chrome.runtime.getURL('src/blocked/blocked.html') + '?blocked=' + encodeURIComponent(t.url) });
+      }
+    }
     return { ok: true, domain, mode: modes[idx] };
 
   } else if (action === 'setGlobalSchedule') {

@@ -152,8 +152,15 @@ h1 {
   box-shadow: 0 4px 10px var(--shadow-color);
 }
 .btn:active { opacity: 0.75; }
-.btn:disabled { opacity: 0.35; cursor: not-allowed; }
-.btn:disabled:hover { background: var(--btn-bg); color: var(--btn-text); box-shadow: none; }
+.btn:disabled,
+.btn:disabled:hover {
+  opacity: 0.55;
+  background: var(--bg-primary) !important;
+  color: var(--text-secondary) !important;
+  border-color: var(--text-secondary) !important;
+  cursor: not-allowed;
+  box-shadow: none !important;
+}
 
 /* Count row */
 .count-row {
