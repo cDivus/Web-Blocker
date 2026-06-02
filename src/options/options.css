@@ -272,28 +272,25 @@ textarea { resize: vertical; min-height: 90px; }
 .btn:disabled { opacity: 0.35; cursor: not-allowed; }
 .btn:disabled:hover { background: var(--btn-bg); color: var(--btn-text); box-shadow: none; }
 
-.btn-outline-theme {
-  border-color: var(--border-color);
-  color: var(--text-primary);
-  background: var(--bg-card);
-}
-
-.btn-outline-theme:hover {
-  background: var(--border-color);
-  color: var(--bg-card);
-  box-shadow: 0 4px 12px var(--shadow-color);
-}
-
+.btn-outline-theme,
 .btn-danger {
   border-color: var(--border-color);
   color: var(--text-primary);
   background: var(--bg-card);
 }
 
+.btn-outline-theme:hover,
 .btn-danger:hover {
   background: var(--border-color);
   color: var(--bg-card);
   box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+/* Prevent unselected template type toggle buttons from swapping colors to active state on hover, giving subtle feedback instead */
+#btn-blockpage-type-default.btn-outline-theme:hover,
+#btn-blockpage-type-custom.btn-outline-theme:hover {
+  background: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 /* Switch */
@@ -407,8 +404,8 @@ input:checked + .slider::before {
   border-color: var(--border-color) !important;
 }
 .btn-active-toggle:hover {
-  background: var(--bg-card) !important;
-  color: var(--border-color) !important;
+  background: var(--btn-hover-bg) !important;
+  color: var(--btn-hover-text) !important;
 }
 
 .modes-grid {

@@ -56,9 +56,6 @@ export function renderBlockPage() {
   // Clear file input
   const fileInput = document.getElementById('blockpage-file-input');
   if (fileInput) fileInput.value = '';
-
-  const btnSave = document.getElementById('btn-save-blockpage');
-  if (btnSave) btnSave.disabled = true;
 }
 
 export function updateBlockPageToggleButtons() {
@@ -67,11 +64,11 @@ export function updateBlockPageToggleButtons() {
   if (!btnDefault || !btnCustom) return;
 
   if (store.currentBlockPageType === 'custom') {
-    btnDefault.className = 'btn';
+    btnDefault.className = 'btn btn-outline-theme';
     btnCustom.className = 'btn btn-active-toggle';
   } else {
     btnDefault.className = 'btn btn-active-toggle';
-    btnCustom.className = 'btn';
+    btnCustom.className = 'btn btn-outline-theme';
   }
 }
 
@@ -89,30 +86,37 @@ export function toggleBlockPageContainers() {
   }
 }
 
-export function checkBlockPageSaveStatus() {
-  const btnSave = document.getElementById('btn-save-blockpage');
-  if (!btnSave) return;
+export async function saveBlockPageSettings() {
+  if (store.currentBlockPageType === 'custom') {
+    const html = store.tempCustomHtml !== null ? store.tempCustomHtml : store.originalCustomHtml;
+    const assets = store.tempCustomAssets !== null ? store.tempCustomAssets : store.originalCustomAssets;
+    const name = store.tempCustomName !== null ? store.tempCustomName : store.originalCustomName;
 
-  if (store.currentBlockPageType !== store.originalBlockPageType) {
-    // If template type changed
-    if (store.currentBlockPageType === 'custom') {
-      btnSave.disabled = !(store.originalCustomHtml || store.tempCustomHtml);
-    } else {
-      btnSave.disabled = false;
-    }
+    if (!html) return; // Don't auto-save if custom block page isn't set up yet
+
+    await sendMsg('saveBlockPage', {
+      type: 'custom',
+      html,
+      assets,
+      name
+    });
+    store.state.blockPageType = 'custom';
+    store.state.customBlockHtml = html;
+    store.state.customBlockAssets = assets;
+    store.state.customBlockName = name;
   } else {
-    // If same type, check changes within that type
-    if (store.currentBlockPageType === 'custom') {
-      btnSave.disabled = (store.tempCustomHtml === null);
-    } else {
-      const textarea = document.getElementById('block-page-content');
-      const currentText = textarea ? textarea.value : '';
-      const checkbox = document.getElementById('block-page-use-quotes');
-      const currentUseQuotes = checkbox ? checkbox.checked : false;
-
-      btnSave.disabled = (currentText === store.originalBlockPageText && currentUseQuotes === store.originalBlockPageUseQuotes);
-    }
+    const content = document.getElementById('block-page-content').value;
+    const useQuotes = document.getElementById('block-page-use-quotes').checked;
+    await sendMsg('saveBlockPage', {
+      type: 'default',
+      content,
+      useQuotes
+    });
+    store.state.blockPageType = 'default';
+    store.state.blockPageContent = content;
+    store.state.blockPageUseQuotes = useQuotes;
   }
+  renderBlockPage();
 }
 
 export function compileCustomBlockPage(html, assets) {
@@ -198,19 +202,19 @@ export function renderCustomPreview(html, assets) {
 
 export function setupBlockPageListeners() {
   // Toggle: Default Message
-  document.getElementById('btn-blockpage-type-default').addEventListener('click', () => {
+  document.getElementById('btn-blockpage-type-default').addEventListener('click', async () => {
     store.currentBlockPageType = 'default';
     updateBlockPageToggleButtons();
     toggleBlockPageContainers();
-    checkBlockPageSaveStatus();
+    await saveBlockPageSettings();
   });
 
   // Toggle: Custom ZIP / HTML
-  document.getElementById('btn-blockpage-type-custom').addEventListener('click', () => {
+  document.getElementById('btn-blockpage-type-custom').addEventListener('click', async () => {
     store.currentBlockPageType = 'custom';
     updateBlockPageToggleButtons();
     toggleBlockPageContainers();
-    checkBlockPageSaveStatus();
+    await saveBlockPageSettings();
   });
 
   // Choose file trigger
@@ -231,14 +235,14 @@ export function setupBlockPageListeners() {
     if (ext === 'html' || ext === 'htm') {
       // Single HTML file
       const reader = new FileReader();
-      reader.onload = event => {
+      reader.onload = async event => {
         store.tempCustomHtml = event.target.result;
         store.tempCustomAssets = {};
         store.tempCustomName = file.name;
 
         // Render preview
         renderCustomPreview(store.tempCustomHtml, store.tempCustomAssets);
-        checkBlockPageSaveStatus();
+        await saveBlockPageSettings();
       };
       reader.onerror = () => {
         alert('Failed to read HTML file.');
@@ -293,7 +297,7 @@ export function setupBlockPageListeners() {
 
           // Render preview
           renderCustomPreview(store.tempCustomHtml, store.tempCustomAssets);
-          checkBlockPageSaveStatus();
+          await saveBlockPageSettings();
         } catch (err) {
           console.error(err);
           alert('Failed to parse ZIP archive. Make sure it is a valid zip file.');
@@ -317,13 +321,13 @@ export function setupBlockPageListeners() {
       if (preview) {
         preview.textContent = e.target.value || 'You blocked this site for a reason.';
       }
-      checkBlockPageSaveStatus();
     });
+    blockPageContentEl.addEventListener('blur', saveBlockPageSettings);
   }
 
   const useQuotesEl = document.getElementById('block-page-use-quotes');
   if (useQuotesEl) {
-    useQuotesEl.addEventListener('change', e => {
+    useQuotesEl.addEventListener('change', async e => {
       const checked = e.target.checked;
       const textarea = document.getElementById('block-page-content');
       if (textarea) {
@@ -333,38 +337,7 @@ export function setupBlockPageListeners() {
       if (preview) {
         preview.textContent = checked ? '“Committing to nothing makes you distracted by everything.” — Quotes Option Active' : (textarea ? textarea.value : 'You blocked this site for a reason.');
       }
-      checkBlockPageSaveStatus();
+      await saveBlockPageSettings();
     });
   }
-
-  document.getElementById('btn-save-blockpage').addEventListener('click', async () => {
-    if (store.currentBlockPageType === 'custom') {
-      const html = store.tempCustomHtml !== null ? store.tempCustomHtml : store.originalCustomHtml;
-      const assets = store.tempCustomAssets !== null ? store.tempCustomAssets : store.originalCustomAssets;
-      const name = store.tempCustomName !== null ? store.tempCustomName : store.originalCustomName;
-
-      await sendMsg('saveBlockPage', {
-        type: 'custom',
-        html,
-        assets,
-        name
-      });
-      store.state.blockPageType = 'custom';
-      store.state.customBlockHtml = html;
-      store.state.customBlockAssets = assets;
-      store.state.customBlockName = name;
-    } else {
-      const content = document.getElementById('block-page-content').value;
-      const useQuotes = document.getElementById('block-page-use-quotes').checked;
-      await sendMsg('saveBlockPage', {
-        type: 'default',
-        content,
-        useQuotes
-      });
-      store.state.blockPageType = 'default';
-      store.state.blockPageContent = content;
-      store.state.blockPageUseQuotes = useQuotes;
-    }
-    renderBlockPage();
-  });
 }

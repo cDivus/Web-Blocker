@@ -110,10 +110,6 @@ export function renderModeEditor() {
   }
   store.originalDomainsText = serialized;
 
-  // Disable the save button initially since no changes are made yet
-  const btnSave = document.getElementById('btn-save-mode-domains');
-  if (btnSave) btnSave.disabled = true;
-
   // Clear any previous error
   const errEl = document.getElementById('textarea-error');
   if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
@@ -305,13 +301,9 @@ export function setupModesListeners() {
     }
   });
 
-  document.getElementById('btn-save-mode-domains').addEventListener('click', saveModeDomainsFromTextarea);
-
-  document.getElementById('mode-domains-textarea').addEventListener('input', () => {
-    const currentText = document.getElementById('mode-domains-textarea').value;
-    const btnSave = document.getElementById('btn-save-mode-domains');
-    if (btnSave) {
-      btnSave.disabled = (currentText === store.originalDomainsText);
-    }
-  });
+  // Auto-save on blur when editing is finished
+  const textarea = document.getElementById('mode-domains-textarea');
+  if (textarea) {
+    textarea.addEventListener('blur', saveModeDomainsFromTextarea);
+  }
 }
