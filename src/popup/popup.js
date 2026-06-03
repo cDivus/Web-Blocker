@@ -62,7 +62,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (currentTabRes && currentTabRes.url) {
     const domain = normalizeDomain(currentTabRes.url);
-    if (domain && !/^(chrome|chrome-extension|about|edge):/.test(currentTabRes.url)) {
+    if (domain && !/^(chrome|chrome-extension|moz-extension|about|edge):/.test(currentTabRes.url)) {
       isBlockable = true;
     }
 

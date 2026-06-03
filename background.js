@@ -151,7 +151,7 @@ async function shouldBlock(url) {
 // ===== NAVIGATION =====
 chrome.webNavigation.onBeforeNavigate.addListener(async ({ tabId, frameId, url }) => {
   if (frameId !== 0) return;
-  if (!url || /^(chrome|chrome-extension|about):/.test(url)) return;
+  if (!url || /^(chrome|chrome-extension|moz-extension|about|edge):/.test(url)) return;
 
   if (await shouldBlock(url)) {
     chrome.tabs.update(tabId, { url: chrome.runtime.getURL('src/blocked/blocked.html') + '?blocked=' + encodeURIComponent(url) });
@@ -161,7 +161,14 @@ chrome.webNavigation.onBeforeNavigate.addListener(async ({ tabId, frameId, url }
 let lastPopupActiveTime = 0;
 
 // ===== REAL-TIME TIMER TRACKING =====
-async function updateTracker() {
+// Mutex to serialize all tracker operations and prevent race conditions
+// (e.g. onRemoved + onActivated firing concurrently and double-counting).
+let _trackerLock = Promise.resolve();
+function updateTracker() {
+  _trackerLock = _trackerLock.then(() => _updateTrackerImpl()).catch(() => {});
+  return _trackerLock;
+}
+async function _updateTrackerImpl() {
   const lastWin = await new Promise(resolve => {
     chrome.windows.getLastFocused({ populate: false }, (w) => {
       if (chrome.runtime.lastError) resolve(null);
@@ -207,7 +214,7 @@ async function updateTracker() {
   let limitMinutes = null;
   let activeTabUrl = null;
   
-  if (isEnabled && isBrowserFocused && activeTab && activeTab.url && !/^(chrome|chrome-extension|about):/.test(activeTab.url)) {
+  if (isEnabled && isBrowserFocused && activeTab && activeTab.url && !/^(chrome|chrome-extension|moz-extension|about|edge):/.test(activeTab.url)) {
     const domain = getDomainFromUrl(activeTab.url);
     if (domain) {
       const activeMode = getActiveModeAtTime(data, Date.now());
@@ -306,11 +313,14 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     updateTracker();
   }
 });
-chrome.tabs.onRemoved.addListener(async (tabId) => {
-  const data = await get(['currentTracker']);
-  if (data.currentTracker && data.currentTracker.tabId === tabId) {
-    await recordTrackerExit(data.currentTracker);
-  }
+chrome.tabs.onRemoved.addListener((tabId) => {
+  // Serialize through the same lock to prevent race with onActivated
+  _trackerLock = _trackerLock.then(async () => {
+    const data = await get(['currentTracker']);
+    if (data.currentTracker && data.currentTracker.tabId === tabId) {
+      await recordTrackerExit(data.currentTracker);
+    }
+  }).catch(() => {});
 });
 
 // ===== ALARMS =====
@@ -347,8 +357,12 @@ async function handle(msg) {
 
   } else if (action === 'getTimers') {
     lastPopupActiveTime = Date.now();
-    await updateTracker();
 
+    // Read current stored timers and the active tracker from storage.
+    // Do NOT call updateTracker() here — that would persist the elapsed to
+    // siteTimers, and then the block below would add elapsed again on top,
+    // causing double-counting. Instead, we compute the live display value
+    // in memory only (without writing to storage).
     const data = await get(['siteTimers', 'currentTracker']);
     const timers = data.siteTimers || {};
     const tracker = data.currentTracker;
