@@ -352,7 +352,7 @@ async function handle(msg) {
     const data = await get(['enabled','modes','activeModeId','globalSchedule',
       'tempUnblocks','blockPageContent','scheduleEnabled','password',
       'blockPageType','customBlockHtml','customBlockAssets','customBlockName',
-      'blockPageUseQuotes']);
+      'blockPageUseQuotes', 'blockPageQuotes']);
     return { ...data, enabled: data.enabled !== false };
 
   } else if (action === 'getTimers') {
@@ -489,6 +489,10 @@ async function handle(msg) {
         blockPageUseQuotes: msg.useQuotes || false
       });
     }
+    return { ok: true };
+
+  } else if (action === 'saveBlockPageQuotes') {
+    await set({ blockPageQuotes: msg.quotes });
     return { ok: true };
 
   } else if (action === 'getCurrentTab') {

@@ -148,8 +148,9 @@
 
         <!-- Default Message Container -->
         <div id="blockpage-container-default">
-          <div class="field-label">Message</div>
+          <div class="field-label" id="blockpage-label">Message</div>
           <textarea id="block-page-content" rows="4" placeholder="You blocked this site for a reason."></textarea>
+          <div class="textarea-error" id="blockpage-error" style="display: none; margin-top: 6px; margin-bottom: 12px;"></div>
           <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 500; cursor: pointer; margin-top: 10px; margin-bottom: 4px; user-select: none;">
             <input type="checkbox" id="block-page-use-quotes" style="width: 15px; height: 15px; cursor: pointer;" />
             <span>Use random quotes instead</span>

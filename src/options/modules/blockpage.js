@@ -2,7 +2,23 @@
 import { store } from './state.js';
 import { sendMsg, getMimeType } from './utils.js';
 
-export function renderBlockPage() {
+const DEFAULT_QUOTES = [
+  { text: "Deep work is not a chore. It is a highly satisfying flow state.", author: "Cal Newport" },
+  { text: "Distractions are temporary escapes. Your ambitions are permanent.", author: "Unknown" },
+  { text: "Only in quiet waters do things mirror themselves undistorted. Only in a quiet mind is adequate perception of the world.", author: "Hans Margolius" },
+  { text: "You will never reach your destination if you stop to throw stones at every dog that barks.", author: "Winston Churchill" },
+  { text: "If you commit to nothing, you’ll be distracted by everything.", author: "James Clear" },
+  { text: "Distraction is the only thing that stands between you and your goals.", author: "Unknown" },
+  { text: "It is not that we have so little time but that we lose so much. The life we receive is not short but we make it so.", author: "Seneca" },
+  { text: "The shorter way to do many things is to only do one thing at a time.", author: "Samuel Smiles" },
+  { text: "Time is what we want most, but what we use worst.", author: "William Penn" },
+  { text: "You have power over your mind—not outside events. Realize this, and you will find strength.", author: "Marcus Aurelius" },
+  { text: "Discipline is choosing between what you want now and what you want most.", author: "Abraham Lincoln" },
+  { text: "The successful warrior is the average man, with laser-like focus.", author: "Bruce Lee" },
+  { text: "Freedom is secured not by the fulfilling of men's desires, but by the removal of desire.", author: "Epictetus" }
+];
+
+export function renderBlockPage(skipTextareaUpdate = false, keepError = false) {
   // Load original states
   store.originalBlockPageType = store.state.blockPageType || 'default';
   store.originalBlockPageText = store.state.blockPageContent || 'You blocked this site for a reason.';
@@ -21,14 +37,40 @@ export function renderBlockPage() {
   const textarea = document.getElementById('block-page-content');
   const preview = document.getElementById('preview-box');
   const checkbox = document.getElementById('block-page-use-quotes');
+  const label = document.getElementById('blockpage-label');
 
   if (checkbox) checkbox.checked = store.originalBlockPageUseQuotes;
+
   if (textarea) {
-    textarea.value = store.originalBlockPageText;
-    textarea.disabled = store.originalBlockPageUseQuotes;
+    textarea.disabled = false;
+    if (store.originalBlockPageUseQuotes) {
+      if (label) label.textContent = 'Quotes List';
+      textarea.rows = 10;
+      textarea.placeholder = '"Discipline is choosing between what you want now and what you want most." - Abraham Lincoln';
+      if (!skipTextareaUpdate) {
+        const quotes = store.state.blockPageQuotes || DEFAULT_QUOTES;
+        textarea.value = quotes.map(q => `"${q.text}" - ${q.author}`).join('\n');
+      }
+    } else {
+      if (label) label.textContent = 'Message';
+      textarea.rows = 4;
+      textarea.placeholder = 'You blocked this site for a reason.';
+      if (!skipTextareaUpdate) {
+        textarea.value = store.originalBlockPageText;
+      }
+    }
   }
+
   if (preview) {
     preview.textContent = store.originalBlockPageUseQuotes ? '“Committing to nothing makes you distracted by everything.” — Quotes Option Active' : store.originalBlockPageText;
+  }
+
+  if (!keepError) {
+    const errEl = document.getElementById('blockpage-error');
+    if (errEl) {
+      errEl.style.display = 'none';
+      errEl.textContent = '';
+    }
   }
 
   // Set custom file names
@@ -105,18 +147,72 @@ export async function saveBlockPageSettings() {
     store.state.customBlockAssets = assets;
     store.state.customBlockName = name;
   } else {
-    const content = document.getElementById('block-page-content').value;
     const useQuotes = document.getElementById('block-page-use-quotes').checked;
+    if (useQuotes) return; // If quotes are active, saveQuotesFromTextarea should handle saving.
+
+    const content = document.getElementById('block-page-content').value;
     await sendMsg('saveBlockPage', {
       type: 'default',
       content,
-      useQuotes
+      useQuotes: false
     });
     store.state.blockPageType = 'default';
     store.state.blockPageContent = content;
-    store.state.blockPageUseQuotes = useQuotes;
+    store.state.blockPageUseQuotes = false;
   }
-  renderBlockPage();
+  renderBlockPage(true);
+}
+
+export async function saveQuotesFromTextarea() {
+  const textarea = document.getElementById('block-page-content');
+  if (!textarea) return;
+
+  const raw = textarea.value;
+  const lines = raw.split('\n');
+  const errEl = document.getElementById('blockpage-error');
+
+  const entries = [];
+  const errors = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line.trim()) continue; // skip blank lines
+
+    // format: "quote" - author
+    const match = line.trim().match(/^"(.+)"\s*-\s*(.+)$/);
+    if (!match) {
+      errors.push(`Line ${i + 1}: Invalid format. Expected "quote" - author`);
+      continue;
+    }
+
+    const text = match[1].trim();
+    const author = match[2].trim();
+
+    if (!text || !author) {
+      errors.push(`Line ${i + 1}: Quote and author cannot be empty`);
+      continue;
+    }
+
+    entries.push({ text, author });
+  }
+
+  const hasErrors = errors.length > 0;
+  if (hasErrors) {
+    if (errEl) {
+      errEl.textContent = errors.join(' · ');
+      errEl.style.display = 'block';
+    }
+  } else {
+    if (errEl) {
+      errEl.style.display = 'none';
+      errEl.textContent = '';
+    }
+  }
+
+  // Send the valid entries to background
+  await sendMsg('saveBlockPageQuotes', { quotes: entries });
+  store.state.blockPageQuotes = entries;
+  renderBlockPage(true, hasErrors);
 }
 
 export function compileCustomBlockPage(html, assets) {
@@ -317,27 +413,53 @@ export function setupBlockPageListeners() {
   const blockPageContentEl = document.getElementById('block-page-content');
   if (blockPageContentEl) {
     blockPageContentEl.addEventListener('input', e => {
-      const preview = document.getElementById('preview-box');
-      if (preview) {
-        preview.textContent = e.target.value || 'You blocked this site for a reason.';
+      const useQuotes = document.getElementById('block-page-use-quotes').checked;
+      if (!useQuotes) {
+        const preview = document.getElementById('preview-box');
+        if (preview) {
+          preview.textContent = e.target.value || 'You blocked this site for a reason.';
+        }
       }
     });
-    blockPageContentEl.addEventListener('blur', saveBlockPageSettings);
+
+    blockPageContentEl.addEventListener('blur', () => {
+      const useQuotes = document.getElementById('block-page-use-quotes').checked;
+      if (useQuotes) {
+        saveQuotesFromTextarea();
+      } else {
+        saveBlockPageSettings();
+      }
+    });
+
+    blockPageContentEl.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        setTimeout(() => {
+          const useQuotes = document.getElementById('block-page-use-quotes').checked;
+          if (useQuotes) {
+            saveQuotesFromTextarea();
+          } else {
+            saveBlockPageSettings();
+          }
+        }, 0);
+      }
+    });
   }
 
   const useQuotesEl = document.getElementById('block-page-use-quotes');
   if (useQuotesEl) {
     useQuotesEl.addEventListener('change', async e => {
       const checked = e.target.checked;
-      const textarea = document.getElementById('block-page-content');
-      if (textarea) {
-        textarea.disabled = checked;
-      }
-      const preview = document.getElementById('preview-box');
-      if (preview) {
-        preview.textContent = checked ? '“Committing to nothing makes you distracted by everything.” — Quotes Option Active' : (textarea ? textarea.value : 'You blocked this site for a reason.');
-      }
-      await saveBlockPageSettings();
+      
+      // Save setting (keeping the old block message)
+      await sendMsg('saveBlockPage', {
+        type: 'default',
+        content: store.state.blockPageContent || 'You blocked this site for a reason.',
+        useQuotes: checked
+      });
+      store.state.blockPageUseQuotes = checked;
+      
+      // Render to reload values and switch between message and quotes list
+      renderBlockPage(false);
     });
   }
 }

@@ -115,7 +115,7 @@ function compileCustomBlockPage(html, assets) {
 }
 
 // Load custom block page message or custom ZIP/HTML template
-chrome.storage.local.get(['blockPageContent', 'blockPageType', 'customBlockHtml', 'customBlockAssets', 'blockPageUseQuotes'], (data) => {
+chrome.storage.local.get(['blockPageContent', 'blockPageType', 'customBlockHtml', 'customBlockAssets', 'blockPageUseQuotes', 'blockPageQuotes'], (data) => {
   document.title = `Blocked — ${blockedDomain || 'Web Blocker'}`;
 
   if (data.blockPageType === 'custom' && data.customBlockHtml) {
@@ -134,7 +134,7 @@ chrome.storage.local.get(['blockPageContent', 'blockPageType', 'customBlockHtml'
 
   // Fallback to default message-based blocker
   if (data.blockPageUseQuotes) {
-    const quotes = [
+    const quotes = data.blockPageQuotes || [
       { text: "Deep work is not a chore. It is a highly satisfying flow state.", author: "Cal Newport" },
       { text: "Distractions are temporary escapes. Your ambitions are permanent.", author: "Unknown" },
       { text: "Only in quiet waters can things reflect undistorted.", author: "Chinese Proverb" },
