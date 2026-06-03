@@ -80,7 +80,7 @@ export function handlePencilClick(modeId) {
   }
 }
 
-export function renderModeEditor() {
+export function renderModeEditor(skipTextareaUpdate = false, keepError = false) {
   const modes = store.state.modes || [];
   const mode = modes.find(m => m.id === store.selectedModeId);
   const editor = document.getElementById('mode-editor');
@@ -105,14 +105,16 @@ export function renderModeEditor() {
 
   // Populate textarea — one entry per line in "domain" or "domain; minutes" format
   const serialized = serializeEntries(mode.domains);
-  if (domainsTextarea) {
+  if (domainsTextarea && !skipTextareaUpdate) {
     domainsTextarea.value = serialized;
   }
   store.originalDomainsText = serialized;
 
   // Clear any previous error
-  const errEl = document.getElementById('textarea-error');
-  if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+  if (!keepError) {
+    const errEl = document.getElementById('textarea-error');
+    if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+  }
 
   const btnActivate = document.getElementById('btn-activate-mode');
   if (btnActivate) {
@@ -184,26 +186,26 @@ export async function saveModeDomainsFromTextarea() {
     }
   }
 
-  if (errors.length > 0) {
+  const hasErrors = errors.length > 0;
+  if (hasErrors) {
     if (errEl) {
       errEl.textContent = errors.join(' · ');
       errEl.style.display = 'block';
     }
-    return; // Block saving
+  } else {
+    if (errEl) {
+      errEl.style.display = 'none';
+      errEl.textContent = '';
+    }
   }
 
-  if (errEl) {
-    errEl.style.display = 'none';
-    errEl.textContent = '';
-  }
-
-  // Send the full updated list to background
+  // Send the valid entries to background anyway
   const res = await sendMsg('setModeDomains', { modeId: store.selectedModeId, domains: entries });
   if (res && res.ok) {
     const idx = (store.state.modes || []).findIndex(m => m.id === store.selectedModeId);
     if (idx !== -1) store.state.modes[idx].domains = entries;
     renderModes();
-    renderModeEditor();
+    renderModeEditor(true, hasErrors);
   }
 }
 
@@ -305,5 +307,10 @@ export function setupModesListeners() {
   const textarea = document.getElementById('mode-domains-textarea');
   if (textarea) {
     textarea.addEventListener('blur', saveModeDomainsFromTextarea);
+    textarea.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        setTimeout(saveModeDomainsFromTextarea, 0);
+      }
+    });
   }
 }

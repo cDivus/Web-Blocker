@@ -42,6 +42,15 @@ export function setupPasswordListeners() {
     renderPasswordSettings();
   });
 
+  const settingsPasswordInput = document.getElementById('settings-password-input');
+  if (settingsPasswordInput) {
+    settingsPasswordInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        document.getElementById('btn-save-password').click();
+      }
+    });
+  }
+
   document.getElementById('btn-remove-password').addEventListener('click', async () => {
     const pwdInput = document.getElementById('settings-password-remove-input');
     const errEl = document.getElementById('password-settings-error');
@@ -54,6 +63,15 @@ export function setupPasswordListeners() {
     store.state.password = '';
     renderPasswordSettings();
   });
+
+  const settingsPasswordRemoveInput = document.getElementById('settings-password-remove-input');
+  if (settingsPasswordRemoveInput) {
+    settingsPasswordRemoveInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        document.getElementById('btn-remove-password').click();
+      }
+    });
+  }
 
   document.getElementById('btn-unlock-settings').addEventListener('click', () => {
     const input = document.getElementById('lock-password-input');
