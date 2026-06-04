@@ -1,22 +1,23 @@
 # Web Blocker & Timer
 
-The simplest and most elegant website blocker to boost your focus and productivity.
+The simplest Web Blocker & Timer. Customizable block modes,  daily time limits,  schedules, and block screens.
 
-<a href="https://chromewebstore.google.com/detail/auto-scroll/nangpjnofohhhhofaifkhgidjfjknlgl">
+<a href="https://chromewebstore.google.com/detail/web-blocker-timer/njmoiibhnbpgbgjjfoohndjfeolghkje">
   <img src="assets/available_on_chrome_webstore.png" width="250" alt="Available on the Chrome Web Store">
 </a>
-
+<br>
+<a href="https://addons.mozilla.org/en-US/firefox/addon/web-blocker-timer/">
+  <img src="assets/firefox_add_ons.png" width="250" alt="Available on Firefox Add-ons">
+</a>
 
 ## Features
+🔒 Mode-Based Blocking: Create custom categories (e.g. "Focus Mode," or "General Blocks") and configure tailored block lists for each.
 
-- Elegant and responsive focus-oriented UI
-- Mode-based website blocking (built-in Focus mode and fully customizable profiles)
-- Comprehensive scheduling system (hourly calendar to activate focus modes dynamically)
-- Daily usage time limits per site with active browser-focus timer tracking
-- Smart temporary unblock limits for quick, timed site access
-- Password protection to prevent unauthorized setting changes
-- Custom block page designer (support for custom assets, custom HTML, and quotes)
-- Automatic Dark/Light mode support
+⏱️ Daily Time Limits: Set custom time allowances for specific websites. 
+
+📅 Scheduling: Enforce modes automatically. Define custom active time and days to automate your blocks.
+
+🧩 Custom Block Pages: Personalize your block screen by uploading your own static HTML files.
 
 ## License
 

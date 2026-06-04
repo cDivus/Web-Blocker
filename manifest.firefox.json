@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Web Blocker & Timer",
-  "version": "1.2.0",
-  "description": "A simple, powerful website blocker with mode-based blocking, scheduling, and temporary unblock features.",
+  "version": "1.5.0",
+  "description": "The simplest Web Blocker & Timer. Customizable block modes,  daily time limits,  schedules, and block screens.",
   "permissions": [
     "storage",
     "alarms",
