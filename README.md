@@ -19,6 +19,26 @@ The simplest Web Blocker & Timer. Customizable block modes,  daily time limits, 
 
 🧩 Custom Block Pages: Personalize your block screen by uploading your own static HTML files.
 
+## Block List Formats & Syntax
+
+When editing a block mode, you can write blocking rules in several formats. Each line corresponds to one rule:
+
+| Format / Example | Description |
+| :--- | :--- |
+| `facebook.com` | **Standard Block**: Blocks the domain (and subdomains) completely. |
+| `youtube.com; 30` | **Daily Time Limit**: Restricts access to the domain to a maximum of 30 minutes daily. |
+| `games` | **Keyword Block**: Blocks any website whose hostname contains the keyword "games" (e.g., `coolgames.com`). |
+| `facebook.com, instagram.com; 20` | **Combined Daily Limit**: Combines the daily limit for multiple domains to a shared pool of 20 minutes. |
+| `games; 20` | **Combined Daily Limit with Keyword**: Blocks any website whose hostname contains the keyword "games" (e.g., `coolgames.com`) and combines the daily limit for multiple domains to a shared pool of 20 minutes. |
+| `!music.youtube.com` | **Allowlist Exception**: Bypasses any block rules for `music.youtube.com`. |
+
+
+## Sample Custom Block Pages
+
+The extension supports custom block page templates. You can find pre-made samples in the [blockpages_samples](./blockpages_samples) directory. You can upload them either as a single `.html` file or as a `.zip` archive containing the assets:
+
+
 ## License
 
 GNU GENERAL PUBLIC LICENSE Version 3
+
