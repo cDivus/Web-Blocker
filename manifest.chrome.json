@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Web Blocker & Timer",
-  "version": "1.5.0",
+  "version": "2.0.0",
   "description": "The simplest Web Blocker & Timer. Customizable block modes,  daily time limits,  schedules, and block screens.",
   "permissions": [
     "storage",
@@ -12,7 +12,8 @@
     "<all_urls>"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
   "options_ui": {
     "page": "src/options/options.html",
