@@ -1,16 +1,4 @@
-function normalizeDomain(input) {
-  const trimmed = input.trim().toLowerCase();
-  if (!trimmed) return '';
-  if (trimmed.includes(' ')) return ''; // Spaces are never allowed in domains or keywords!
-  if (!trimmed.includes('.')) return trimmed;
-  try {
-    let url = trimmed;
-    if (!url.startsWith('http')) url = 'https://' + url;
-    return new URL(url).hostname.replace(/^www\./, '');
-  } catch {
-    return trimmed.replace(/^www\./, '');
-  }
-}
+import { normalizeDomain } from '../common/utils/domains.js';
 
 // Apply theme immediately on script load
 chrome.storage.local.get('theme', (data) => {
