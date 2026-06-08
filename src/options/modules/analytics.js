@@ -49,16 +49,6 @@ export async function renderAnalytics() {
 
   const today = new Date().toISOString().slice(0, 10);
 
-  container.textContent = '';
-  
-  const modeLabel = document.createElement('div');
-  modeLabel.className = 'analytics-mode-label';
-  modeLabel.textContent = 'Active mode: ';
-  const strongMode = document.createElement('strong');
-  strongMode.textContent = activeMode.name;
-  modeLabel.appendChild(strongMode);
-  container.appendChild(modeLabel);
-
   const fmt = ms => {
     const totalSec = Math.floor(ms / 1000);
     const h = Math.floor(totalSec / 3600);
@@ -68,6 +58,67 @@ export async function renderAnalytics() {
     if (m > 0) return `${m}m ${s}s`;
     return `${s}s`;
   };
+
+  // Check if we can perform in-place update of existing cards to prevent hover flicker
+  const existingCards = container.querySelectorAll('.analytics-card');
+  const labelEl = container.querySelector('.analytics-mode-label strong');
+
+  let match = false;
+  if (labelEl && labelEl.textContent === activeMode.name && existingCards.length === timedEntries.length) {
+    match = true;
+    for (let i = 0; i < timedEntries.length; i++) {
+      const card = existingCards[i];
+      if (card.dataset.domain !== timedEntries[i].domain || card.dataset.limit !== String(timedEntries[i].limitMinutes)) {
+        match = false;
+        break;
+      }
+    }
+  }
+
+  if (match) {
+    timedEntries.forEach((entry, i) => {
+      const limitMs  = entry.limitMinutes * 60 * 1000;
+      const rec      = siteTimers[entry.domain];
+      const usedMs   = (rec && rec.date === today) ? (rec.usedMs || 0) : 0;
+      const remMs    = Math.max(0, limitMs - usedMs);
+      const pct      = Math.min(100, Math.round((usedMs / limitMs) * 100));
+
+      const statusClass = pct >= 100 ? 'timer-bar-full' : pct >= 75 ? 'timer-bar-warn' : '';
+
+      const card = existingCards[i];
+      const barFill = card.querySelector('.analytics-bar-fill');
+      const usedSpan = card.querySelector('.analytics-used');
+      const remainingSpan = card.querySelector('.analytics-remaining');
+
+      if (barFill) {
+        barFill.className = `analytics-bar-fill ${statusClass}`.trim();
+        barFill.style.width = `${pct}%`;
+      }
+      if (usedSpan) {
+        usedSpan.textContent = `Used: ${fmt(usedMs)}`;
+      }
+      if (remainingSpan) {
+        if (pct >= 100) {
+          remainingSpan.className = 'analytics-remaining analytics-exhausted';
+          remainingSpan.textContent = 'Blocked';
+        } else {
+          remainingSpan.className = 'analytics-remaining';
+          remainingSpan.textContent = `${fmt(remMs)} left`;
+        }
+      }
+    });
+    return;
+  }
+
+  container.textContent = '';
+  
+  const modeLabel = document.createElement('div');
+  modeLabel.className = 'analytics-mode-label';
+  modeLabel.textContent = 'Active mode: ';
+  const strongMode = document.createElement('strong');
+  strongMode.textContent = activeMode.name;
+  modeLabel.appendChild(strongMode);
+  container.appendChild(modeLabel);
 
   timedEntries.forEach(entry => {
     const limitMs  = entry.limitMinutes * 60 * 1000;
@@ -81,6 +132,8 @@ export async function renderAnalytics() {
     // Create .analytics-card
     const card = document.createElement('div');
     card.className = 'analytics-card';
+    card.dataset.domain = entry.domain;
+    card.dataset.limit = entry.limitMinutes;
 
     // Header
     const header = document.createElement('div');
