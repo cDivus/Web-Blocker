@@ -1,4 +1,4 @@
-import { normalizeDomain } from '../common/utils/domains.js';
+import { normalizeDomain, getLocalDateString } from '../common/utils.js';
 
 // Apply theme immediately on script load
 chrome.storage.local.get('theme', (data) => {
@@ -83,7 +83,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const updatePopupTimer = async () => {
       const timersRes = await sendMsg('getTimers');
       const timers = (timersRes && timersRes.siteTimers) || {};
-      const today = new Date().toISOString().slice(0, 10);
+      const today = getLocalDateString();
       const rec = timers[matchedEntry.domain];
       const usedMs = (rec && rec.date === today) ? (rec.usedMs || 0) : 0;
       const limitMs = matchedEntry.limitMinutes * 60 * 1000;

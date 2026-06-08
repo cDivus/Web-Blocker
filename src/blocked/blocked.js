@@ -1,5 +1,4 @@
-import { normalizeDomain } from '../common/utils/domains.js';
-import { DEFAULT_QUOTES } from '../common/utils/quotes.js';
+import { normalizeDomain, DEFAULT_QUOTES } from '../common/utils.js';
 
 // Apply theme immediately on script load
 chrome.storage.local.get('theme', (data) => {

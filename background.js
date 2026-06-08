@@ -1,4 +1,4 @@
-import { normalizeDomain } from './src/common/utils/domains.js';
+import { normalizeDomain, getLocalDateString } from './src/common/utils.js';
 
 // ===== UTILITY =====
 
@@ -58,7 +58,7 @@ function getActiveModeAtTime(data, timestamp) {
 }
 
 // ===== TIMER HELPERS =====
-const TODAY_KEY = () => new Date().toISOString().slice(0, 10); // 'YYYY-MM-DD'
+const TODAY_KEY = () => getLocalDateString(); // 'YYYY-MM-DD'
 
 async function getTimerUsage(domain) {
   const data = await get(['siteTimers']);

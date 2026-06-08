@@ -1,5 +1,6 @@
 // ===== ANALYTICS MODULE =====
 import { sendMsg } from './utils.js';
+import { getLocalDateString } from '../../common/utils.js';
 
 export async function renderAnalytics() {
   const container = document.getElementById('analytics-content');
@@ -47,7 +48,7 @@ export async function renderAnalytics() {
     return;
   }
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getLocalDateString();
 
   const fmt = ms => {
     const totalSec = Math.floor(ms / 1000);
