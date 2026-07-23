@@ -66,9 +66,39 @@ export function renderModes() {
     card.addEventListener('click', () => handlePencilClick(mode.id));
     grid.appendChild(card);
   });
+
+  // Render Perpetual Block section visibility, toggle switch state, and site count
+  const perpetualContainer = document.getElementById('perpetual-section-container');
+  const isPerpetualSectionEnabled = store.state.perpetualSectionEnabled !== false;
+  if (perpetualContainer) {
+    perpetualContainer.style.display = isPerpetualSectionEnabled ? 'block' : 'none';
+  }
+
+  const togglePerpetualSection = document.getElementById('toggle-perpetual-section');
+  if (togglePerpetualSection) {
+    togglePerpetualSection.checked = isPerpetualSectionEnabled;
+  }
+
+  const perpetualCountEl = document.getElementById('perpetual-card-count');
+  if (perpetualCountEl) {
+    const perpetualDomains = store.state.perpetualBlock || [];
+    let n = 0;
+    let t = 0;
+    perpetualDomains.forEach(e => {
+      if (e && e.domain) {
+        const countOfDomains = e.domain.split(',').filter(Boolean).length;
+        n += countOfDomains;
+        if (e.limitMinutes != null) t += countOfDomains;
+      }
+    });
+    perpetualCountEl.textContent = `${n} site${n !== 1 ? 's' : ''}${t > 0 ? ` · ${t} timed` : ''}`;
+  }
 }
 
 export function handlePencilClick(modeId) {
+  const perpetualEditor = document.getElementById('perpetual-editor');
+  if (perpetualEditor) perpetualEditor.style.display = 'none';
+
   if (store.selectedModeId === modeId) {
     // Already open for this mode — close it
     store.selectedModeId = null;
@@ -312,5 +342,151 @@ export function setupModesListeners() {
         setTimeout(saveModeDomainsFromTextarea, 0);
       }
     });
+  }
+
+  // ---- PERPETUAL BLOCK LISTENERS ----
+  const perpetualCard = document.getElementById('perpetual-card');
+  if (perpetualCard) {
+    perpetualCard.addEventListener('click', () => {
+      const modeEditor = document.getElementById('mode-editor');
+      if (modeEditor) modeEditor.style.display = 'none';
+      store.selectedModeId = null;
+
+      if (store.state.password && !store.perpetualUnlocked) {
+        const authContainer = document.getElementById('perpetual-auth-container');
+        const passInput = document.getElementById('perpetual-auth-password-input');
+        const errEl = document.getElementById('perpetual-auth-error');
+        const perpetualEditor = document.getElementById('perpetual-editor');
+
+        if (perpetualEditor) perpetualEditor.style.display = 'none';
+
+        if (authContainer) {
+          if (authContainer.style.display === 'none' || !authContainer.style.display) {
+            authContainer.style.display = 'block';
+            if (passInput) { passInput.value = ''; passInput.focus(); }
+            if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+          } else {
+            authContainer.style.display = 'none';
+          }
+        }
+      } else {
+        const authContainer = document.getElementById('perpetual-auth-container');
+        if (authContainer) authContainer.style.display = 'none';
+        openPerpetualEditor();
+      }
+    });
+  }
+
+  const btnAuthSubmit = document.getElementById('btn-perpetual-auth-submit');
+  const authPassInput = document.getElementById('perpetual-auth-password-input');
+
+  const handleAuthSubmit = () => {
+    const entered = authPassInput ? authPassInput.value : '';
+    const errEl = document.getElementById('perpetual-auth-error');
+    if (entered === store.state.password) {
+      store.perpetualUnlocked = true;
+      const authContainer = document.getElementById('perpetual-auth-container');
+      if (authContainer) authContainer.style.display = 'none';
+      openPerpetualEditor();
+    } else {
+      if (errEl) {
+        errEl.textContent = 'Incorrect password.';
+        errEl.style.display = 'block';
+      }
+    }
+  };
+
+  if (btnAuthSubmit) btnAuthSubmit.addEventListener('click', handleAuthSubmit);
+  if (authPassInput) {
+    authPassInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') handleAuthSubmit();
+    });
+  }
+
+  const btnSavePerpetual = document.getElementById('btn-save-perpetual');
+  if (btnSavePerpetual) btnSavePerpetual.addEventListener('click', savePerpetualBlockFromTextarea);
+
+  const perpetualTextarea = document.getElementById('perpetual-domains-textarea');
+  if (perpetualTextarea) {
+    perpetualTextarea.addEventListener('blur', savePerpetualBlockFromTextarea);
+  }
+
+  // Toggle for hiding Perpetual Block section
+  const togglePerpetualSection = document.getElementById('toggle-perpetual-section');
+  if (togglePerpetualSection) {
+    togglePerpetualSection.checked = store.state.perpetualSectionEnabled !== false;
+    togglePerpetualSection.addEventListener('change', async () => {
+      const isEnabled = togglePerpetualSection.checked;
+      store.state.perpetualSectionEnabled = isEnabled;
+      await sendMsg('setPerpetualSectionEnabled', { enabled: isEnabled });
+      const perpetualContainer = document.getElementById('perpetual-section-container');
+      if (perpetualContainer) {
+        perpetualContainer.style.display = isEnabled ? 'block' : 'none';
+      }
+    });
+  }
+}
+
+export function openPerpetualEditor() {
+  const modeEditor = document.getElementById('mode-editor');
+  if (modeEditor) modeEditor.style.display = 'none';
+  store.selectedModeId = null;
+
+  const perpetualEditor = document.getElementById('perpetual-editor');
+  const textarea = document.getElementById('perpetual-domains-textarea');
+  if (!perpetualEditor) return;
+
+  if (perpetualEditor.style.display === 'none' || !perpetualEditor.style.display) {
+    perpetualEditor.style.display = 'block';
+    store.isPerpetualEditorOpen = true;
+    if (textarea) {
+      textarea.value = serializeEntries(store.state.perpetualBlock || []);
+    }
+  } else {
+    perpetualEditor.style.display = 'none';
+    store.isPerpetualEditorOpen = false;
+  }
+}
+
+export async function savePerpetualBlockFromTextarea() {
+  const textarea = document.getElementById('perpetual-domains-textarea');
+  const errEl = document.getElementById('perpetual-textarea-error');
+  if (!textarea) return;
+
+  const lines = textarea.value.split('\n');
+  const entries = [];
+  const errors = [];
+  const seen = new Set();
+
+  for (let i = 0; i < lines.length; i++) {
+    const rawLine = lines[i];
+    if (!rawLine.trim()) continue;
+    const result = parseLine(rawLine);
+    if (!result) {
+      errors.push(`Line ${i + 1}: Invalid format "${rawLine.trim()}"`);
+      continue;
+    }
+    if (!seen.has(result.domain)) {
+      seen.add(result.domain);
+      entries.push(result);
+    }
+  }
+
+  if (errors.length > 0) {
+    if (errEl) {
+      errEl.textContent = errors.join(' · ');
+      errEl.style.display = 'block';
+    }
+  } else {
+    if (errEl) {
+      errEl.style.display = 'none';
+      errEl.textContent = '';
+    }
+  }
+
+  const res = await sendMsg('savePerpetualBlock', { domains: entries });
+  if (res && res.ok) {
+    store.state.perpetualBlock = entries;
+    renderModes();
   }
 }

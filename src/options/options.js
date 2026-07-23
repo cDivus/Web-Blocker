@@ -120,7 +120,9 @@ function setupGlobalListeners() {
       globalSchedule: {},
       scheduleEnabled: false,
       tempUnblocks: {}, siteTimers: {},
-      theme: 'teal'
+      theme: 'teal',
+      perpetualBlock: [],
+      perpetualSectionEnabled: true
     });
     
     // Refresh local memory

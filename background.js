@@ -85,18 +85,48 @@ const set = data  => chrome.storage.local.set(data);
 // ===== BLOCKING LOGIC =====
 async function shouldBlock(url) {
   const data = await get([
-    'enabled', 'modes', 'activeModeId', 'globalSchedule', 'tempUnblocks', 'scheduleEnabled'
+    'enabled', 'modes', 'activeModeId', 'globalSchedule', 'tempUnblocks', 'scheduleEnabled', 'perpetualBlock', 'perpetualSectionEnabled'
   ]);
 
   if (data.enabled === false) return false;
 
-  const activeMode = getActiveModeAtTime(data, Date.now());
-  if (!activeMode || !(activeMode.domains || []).length) return false;
-
   const req = getDomainFromUrl(url);
   if (!req) return false;
 
-  // 1. Check Allowlist (exceptions starting with "!") first
+  const now = Date.now();
+  const tmp = data.tempUnblocks || {};
+
+  // 1. Check Perpetual Block list first (if section is enabled)
+  const isPerpetualEnabled = data.perpetualSectionEnabled !== false;
+  const perpetualDomains = isPerpetualEnabled ? (data.perpetualBlock || []) : [];
+  if (perpetualDomains.length > 0) {
+    const hasPerpetualAllowlist = perpetualDomains.some(e => {
+      const d = (typeof e === 'string') ? e : e.domain;
+      if (!d || !d.startsWith('!')) return false;
+      return entryMatches(req, d.slice(1));
+    });
+
+    if (!hasPerpetualAllowlist) {
+      const matchedPerpetual = findMatchingEntry(req, perpetualDomains);
+      if (matchedPerpetual) {
+        if (!tmp[req] || tmp[req] <= now) {
+          const entry = typeof matchedPerpetual === 'string' ? { domain: matchedPerpetual, limitMinutes: null } : matchedPerpetual;
+          if (entry.limitMinutes != null) {
+            const usedMs = await getTimerUsage(entry.domain);
+            if (usedMs >= entry.limitMinutes * 60 * 1000) return true;
+          } else {
+            return true;
+          }
+        }
+      }
+    }
+  }
+
+  // 2. Next check Active Mode list
+  const activeMode = getActiveModeAtTime(data, Date.now());
+  if (!activeMode || !(activeMode.domains || []).length) return false;
+
+  // Check Allowlist (exceptions starting with "!") first
   const hasAllowlistMatch = (activeMode.domains || []).some(e => {
     const d = (typeof e === 'string') ? e : e.domain;
     if (!d || !d.startsWith('!')) return false;
@@ -108,12 +138,10 @@ async function shouldBlock(url) {
     return false; // Match found on allowlist -> ALLOW (do not block)
   }
 
-  // 2. Otherwise check Blocklist
+  // Otherwise check Blocklist
   const matchedEntry = findMatchingEntry(req, activeMode.domains);
   if (!matchedEntry) return false;
 
-  const now = Date.now();
-  const tmp = data.tempUnblocks || {};
   if (tmp[req] && tmp[req] > now) return false;
 
   // Timer check: if this entry has a daily limit, check usage
@@ -335,8 +363,13 @@ async function handle(msg) {
     const data = await get(['enabled','modes','activeModeId','globalSchedule',
       'tempUnblocks','blockPageContent','scheduleEnabled','password',
       'blockPageType','customBlockHtml','customBlockAssets','customBlockName',
-      'blockPageUseQuotes', 'blockPageQuotes']);
-    return { ...data, enabled: data.enabled !== false };
+      'blockPageUseQuotes', 'blockPageQuotes', 'perpetualBlock', 'perpetualSectionEnabled']);
+    return {
+      ...data,
+      enabled: data.enabled !== false,
+      perpetualBlock: data.perpetualBlock || [],
+      perpetualSectionEnabled: data.perpetualSectionEnabled !== false
+    };
 
   } else if (action === 'getTimers') {
     lastPopupActiveTime = Date.now();
@@ -419,6 +452,28 @@ async function handle(msg) {
     }
     return { ok: true };
 
+  } else if (action === 'savePerpetualBlock') {
+    const perpetualBlock = (msg.domains || []).map(d =>
+      typeof d === 'string' ? { domain: d, limitMinutes: null } : d
+    );
+    await set({ perpetualBlock });
+    await updateTracker();
+
+    // Redirect matching tabs immediately
+    const tabs = await chrome.tabs.query({});
+    for (const t of tabs) {
+      if (t.url && await shouldBlock(t.url)) {
+        chrome.tabs.update(t.id, { url: chrome.runtime.getURL('src/blocked/blocked.html') + '?blocked=' + encodeURIComponent(t.url) });
+      }
+    }
+    return { ok: true, perpetualBlock };
+
+  } else if (action === 'setPerpetualSectionEnabled') {
+    const enabled = msg.enabled !== false;
+    await set({ perpetualSectionEnabled: enabled });
+    await updateTracker();
+    return { ok: true, perpetualSectionEnabled: enabled };
+
   } else if (action === 'addDomain') {
     const domain = normalizeDomain(msg.domain);
     if (!domain) { return { ok: false, error: 'Invalid domain' }; }
@@ -500,7 +555,9 @@ chrome.runtime.onInstalled.addListener(async () => {
       activeModeId: null,
       globalSchedule: {},
       scheduleEnabled: false,
-      tempUnblocks: {}, siteTimers: {}
+      tempUnblocks: {}, siteTimers: {},
+      perpetualBlock: [],
+      perpetualSectionEnabled: true
     });
   }
 });

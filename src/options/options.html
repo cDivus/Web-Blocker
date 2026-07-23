@@ -23,6 +23,8 @@
     </div>
   </div>
 
+
+
   <div class="layout">
 
     <!-- Sidebar -->
@@ -82,6 +84,57 @@
           <textarea id="mode-domains-textarea" rows="12"
             placeholder="domain1.com                                 // blocks domain1.com&#10;domain2.com; 15                           // sets daily timer for domain2.com for 15 minutes&#10;keyword                                         // blocks any hostname containing keyword&#10;domain3.com, domain4.com; 15   // sets daily limit for combined domain usage to 15 minutes&#10;!music.youtube.com                      // allowlist exception (bypasses blocks)"></textarea>
           <div class="textarea-error" id="textarea-error" style="display:none;"></div>
+        </div>
+
+        <!-- Section Divider & Perpetual Block Container -->
+        <div id="perpetual-section-container">
+          <div class="section-divider"></div>
+
+          <!-- Perpetual Block Header -->
+          <div class="modes-header" style="margin-top: 10px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="field-label" style="margin:0; border:none;">Perpetual Block</span>
+            </div>
+          </div>
+          <p class="section-desc" style="margin-top: 4px; margin-bottom: 14px;">
+            Permanent blocks, remember why you blocked them.
+          </p>
+
+          <!-- Perpetual Block Card -->
+          <div class="modes-grid" id="perpetual-grid">
+            <div class="mode-card" id="perpetual-card">
+              <div class="mode-card-header">
+                <div class="mode-card-name">Perpetual</div>
+              </div>
+              <div class="mode-card-count" id="perpetual-card-count">0 sites</div>
+            </div>
+          </div>
+
+          <!-- Inline Password Challenge for Perpetual Block -->
+          <div id="perpetual-auth-container" style="display: none; margin-top: 12px; margin-bottom: 16px;">
+            <div style="display: flex; gap: 8px; align-items: center; max-width: 360px;">
+              <input type="password" id="perpetual-auth-password-input" class="mode-editor-name-input" placeholder="Password to unlock" style="flex: 1; padding: 7px 12px; margin: 0; display: block;" />
+              <button class="btn btn-sm" id="btn-perpetual-auth-submit">Unlock</button>
+            </div>
+            <div class="textarea-error" id="perpetual-auth-error" style="display: none; margin-top: 6px;"></div>
+          </div>
+
+          <!-- Perpetual Block Editor -->
+          <div class="mode-editor" id="perpetual-editor" style="display:none;">
+            <div class="mode-editor-header">
+              <div class="mode-editor-title-container">
+                <span class="mode-editor-name">Perpetual Blocked Sites</span>
+              </div>
+              <div class="mode-editor-btns">
+                <button class="btn btn-sm" id="btn-save-perpetual">Save Changes</button>
+              </div>
+            </div>
+
+            <div class="field-label" style="margin-top:0;">Always Blocked Sites</div>
+            <textarea id="perpetual-domains-textarea" rows="10"
+              placeholder="domain1.com                                 // blocks domain1.com&#10;domain2.com; 15                           // sets daily timer for domain2.com for 15 minutes&#10;keyword                                         // blocks any hostname containing keyword&#10;!music.youtube.com                      // allowlist exception"></textarea>
+            <div class="textarea-error" id="perpetual-textarea-error" style="display:none;"></div>
+          </div>
         </div>
       </section>
 
@@ -215,6 +268,18 @@
               </button>
             </div>
           </div>
+        </div>
+
+        <!-- Perpetual Block Toggle -->
+        <div class="danger-card" style="margin-bottom: 16px;">
+          <div class="danger-card-body" style="flex-grow: 1; margin-right: 16px;">
+            <div class="danger-item-title">PERPETUAL BLOCK SECTION</div>
+            <div class="danger-item-desc">Show or hide the Perpetual Block section on the Block List page.</div>
+          </div>
+          <label class="switch" style="margin: 0; flex-shrink: 0;">
+            <input type="checkbox" id="toggle-perpetual-section" checked />
+            <span class="slider"></span>
+          </label>
         </div>
 
         <!-- Password Settings -->

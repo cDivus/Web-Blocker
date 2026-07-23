@@ -16,7 +16,9 @@ export const store = {
   tempCustomAssets: null,
   tempCustomName: null,
   currentBlockPageType: 'default',
-  analyticsInterval: null
+  analyticsInterval: null,
+  perpetualUnlocked: false,
+  isPerpetualEditorOpen: false
 };
 
 export async function refreshState() {
