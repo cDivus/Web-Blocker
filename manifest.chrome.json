@@ -32,7 +32,8 @@
       "resources": [
         "src/blocked/blocked.html",
         "src/blocked/blocked.js",
-        "src/blocked/blocked.css"
+        "src/blocked/blocked.css",
+        "src/common/theme.css"
       ],
       "matches": [
         "<all_urls>"

@@ -171,7 +171,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       await chrome.storage.local.set({ sessionUnlocked: true });
     }
 
-    chrome.tabs.create({ url: chrome.runtime.getURL('src/options/options.html') });
+      chrome.tabs.create({ url: chrome.runtime.getURL('src/options/options.html') });
   });
 
   // Enable unlock on pressing Enter in the password field
