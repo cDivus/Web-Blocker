@@ -1,6 +1,7 @@
 // ===== MODES MODULE =====
 import { store } from './state.js';
 import { sendMsg, serializeEntries, parseLine, assignModeColors } from './utils.js';
+import { countDomainEntries } from '../../common/utils.js';
 
 export function renderModes() {
   const modes = store.state.modes || [];
@@ -39,19 +40,7 @@ export function renderModes() {
 
     const count = document.createElement('div');
     count.className = 'mode-card-count';
-    const entries = mode.domains || [];
-    let n = 0;
-    let t = 0;
-    entries.forEach(e => {
-      if (e && e.domain) {
-        const countOfDomains = e.domain.split(',').filter(Boolean).length;
-        n += countOfDomains;
-        if (e.limitMinutes != null) {
-          t += countOfDomains;
-        }
-      }
-    });
-    count.textContent = `${n} site${n !== 1 ? 's' : ''}${t > 0 ? ` · ${t} timed` : ''}`;
+    count.textContent = countDomainEntries(mode.domains).label;
 
     card.appendChild(header);
     card.appendChild(count);
@@ -81,17 +70,7 @@ export function renderModes() {
 
   const perpetualCountEl = document.getElementById('perpetual-card-count');
   if (perpetualCountEl) {
-    const perpetualDomains = store.state.perpetualBlock || [];
-    let n = 0;
-    let t = 0;
-    perpetualDomains.forEach(e => {
-      if (e && e.domain) {
-        const countOfDomains = e.domain.split(',').filter(Boolean).length;
-        n += countOfDomains;
-        if (e.limitMinutes != null) t += countOfDomains;
-      }
-    });
-    perpetualCountEl.textContent = `${n} site${n !== 1 ? 's' : ''}${t > 0 ? ` · ${t} timed` : ''}`;
+    perpetualCountEl.textContent = countDomainEntries(store.state.perpetualBlock).label;
   }
 }
 
@@ -184,32 +163,27 @@ export async function createMode() {
   }
 }
 
-export async function saveModeDomainsFromTextarea() {
-  if (!store.selectedModeId) return;
+function parseTextareaEntries(textareaId, errorElId) {
+  const textarea = document.getElementById(textareaId);
+  const errEl = document.getElementById(errorElId);
+  if (!textarea) return { entries: [], hasErrors: false };
 
-  const textarea = document.getElementById('mode-domains-textarea');
-  if (!textarea) return;
-
-  const raw = textarea.value;
-  const lines = raw.split('\n');
-  const errEl = document.getElementById('textarea-error');
-
+  const lines = textarea.value.split('\n');
   const entries = [];
-  const seen = new Set();
   const errors = [];
+  const seen = new Set();
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    if (!line.trim()) continue; // skip blank lines
+    if (!line.trim()) continue;
 
     const result = parseLine(line);
-    if (!result) continue; // blank
+    if (!result) continue;
     if (result.error) {
       errors.push(`Line ${i + 1}: ${result.error}`);
       continue;
     }
 
-    // Deduplicate by domain
     if (!seen.has(result.domain)) {
       seen.add(result.domain);
       entries.push(result);
@@ -217,19 +191,18 @@ export async function saveModeDomainsFromTextarea() {
   }
 
   const hasErrors = errors.length > 0;
-  if (hasErrors) {
-    if (errEl) {
-      errEl.textContent = errors.join(' · ');
-      errEl.style.display = 'block';
-    }
-  } else {
-    if (errEl) {
-      errEl.style.display = 'none';
-      errEl.textContent = '';
-    }
+  if (errEl) {
+    errEl.textContent = hasErrors ? errors.join(' · ') : '';
+    errEl.style.display = hasErrors ? 'block' : 'none';
   }
 
-  // Send the valid entries to background anyway
+  return { entries, hasErrors };
+}
+
+export async function saveModeDomainsFromTextarea() {
+  if (!store.selectedModeId) return;
+  const { entries, hasErrors } = parseTextareaEntries('mode-domains-textarea', 'textarea-error');
+
   const res = await sendMsg('setModeDomains', { modeId: store.selectedModeId, domains: entries });
   if (res && res.ok) {
     const idx = (store.state.modes || []).findIndex(m => m.id === store.selectedModeId);
@@ -449,41 +422,7 @@ export function openPerpetualEditor() {
 }
 
 export async function savePerpetualBlockFromTextarea() {
-  const textarea = document.getElementById('perpetual-domains-textarea');
-  const errEl = document.getElementById('perpetual-textarea-error');
-  if (!textarea) return;
-
-  const lines = textarea.value.split('\n');
-  const entries = [];
-  const errors = [];
-  const seen = new Set();
-
-  for (let i = 0; i < lines.length; i++) {
-    const rawLine = lines[i];
-    if (!rawLine.trim()) continue;
-    const result = parseLine(rawLine);
-    if (!result) {
-      errors.push(`Line ${i + 1}: Invalid format "${rawLine.trim()}"`);
-      continue;
-    }
-    if (!seen.has(result.domain)) {
-      seen.add(result.domain);
-      entries.push(result);
-    }
-  }
-
-  if (errors.length > 0) {
-    if (errEl) {
-      errEl.textContent = errors.join(' · ');
-      errEl.style.display = 'block';
-    }
-  } else {
-    if (errEl) {
-      errEl.style.display = 'none';
-      errEl.textContent = '';
-    }
-  }
-
+  const { entries } = parseTextareaEntries('perpetual-domains-textarea', 'perpetual-textarea-error');
   const res = await sendMsg('savePerpetualBlock', { domains: entries });
   if (res && res.ok) {
     store.state.perpetualBlock = entries;

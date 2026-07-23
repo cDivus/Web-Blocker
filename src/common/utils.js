@@ -49,3 +49,73 @@ export const DEFAULT_QUOTES = [
   { text: "The successful warrior is the average man, with laser-like focus.", author: "Bruce Lee" },
   { text: "Freedom is secured not by the fulfilling of men's desires, but by the removal of desire.", author: "Epictetus" }
 ];
+
+/**
+ * Counts total sites and timed sites for a domain entry list.
+ */
+export function countDomainEntries(domains = []) {
+  let sites = 0;
+  let timed = 0;
+  domains.forEach(e => {
+    if (e && e.domain) {
+      const count = e.domain.split(',').filter(Boolean).length;
+      sites += count;
+      if (e.limitMinutes != null) timed += count;
+    }
+  });
+  const label = `${sites} site${sites !== 1 ? 's' : ''}${timed > 0 ? ` · ${timed} timed` : ''}`;
+  return { sites, timed, label };
+}
+
+/**
+ * Compiles and sanitizes custom block page HTML for security.
+ */
+export function sanitizeCustomHtml(html, assets = {}) {
+  if (!html) return '';
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+
+  const resolveAsset = (relPath) => {
+    const cleanPath = relPath.replace(/^\.\//, '');
+    return assets[cleanPath] || relPath;
+  };
+
+  doc.querySelectorAll('link[rel="stylesheet"]').forEach(el => {
+    const href = el.getAttribute('href');
+    if (href) {
+      const resolved = resolveAsset(href);
+      if (resolved !== href) el.setAttribute('href', resolved);
+    }
+  });
+
+  doc.querySelectorAll('img').forEach(el => {
+    const src = el.getAttribute('src');
+    if (src) {
+      const resolved = resolveAsset(src);
+      if (resolved !== src) el.setAttribute('src', resolved);
+    }
+  });
+
+  // Strip scripts strictly for security
+  doc.querySelectorAll('script').forEach(tag => tag.remove());
+
+  // Strip inline event handlers and javascript: URIs
+  doc.querySelectorAll('*').forEach(el => {
+    for (let i = el.attributes.length - 1; i >= 0; i--) {
+      const attrName = el.attributes[i].name.toLowerCase();
+      if (attrName.startsWith('on')) {
+        el.removeAttribute(el.attributes[i].name);
+      }
+    }
+    const href = el.getAttribute('href');
+    if (href && href.trim().toLowerCase().startsWith('javascript:')) {
+      el.removeAttribute('href');
+    }
+    const src = el.getAttribute('src');
+    if (src && src.trim().toLowerCase().startsWith('javascript:')) {
+      el.removeAttribute('src');
+    }
+  });
+
+  return doc.documentElement.outerHTML;
+}

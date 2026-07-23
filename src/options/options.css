@@ -355,16 +355,7 @@ input:checked + .slider::before {
   border-radius: 2px;
 }
 
-.perpetual-badge {
-  font-size: 0.65rem;
-  font-weight: 700;
-  padding: 3px 8px;
-  border-radius: 12px;
-  background: var(--btn-bg);
-  color: var(--btn-text);
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-}
+
 
 
 
