@@ -102,6 +102,13 @@ function setupNav() {
       if (newModeName) newModeName.value = '';
     });
   });
+
+  document.querySelectorAll('.btn-open-syntax-help').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const helpNavBtn = document.querySelector('.nav-btn[data-section="help"]');
+      if (helpNavBtn) helpNavBtn.click();
+    });
+  });
 }
 
 // ===== GLOBAL CONTROLS =====

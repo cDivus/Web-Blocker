@@ -35,6 +35,7 @@
         <button class="nav-btn" data-section="schedule">Schedule</button>
         <button class="nav-btn" data-section="blockpage">Block Page</button>
         <button class="nav-btn" data-section="analytics">Analytics</button>
+        <button class="nav-btn" data-section="help">Help &amp; Syntax</button>
         <button class="nav-btn" data-section="danger">Other Settings</button>
       </nav>
     </aside>
@@ -80,9 +81,12 @@
             </div>
           </div>
 
-          <div class="field-label" style="margin-top:0;">Blocked Sites</div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top:0;">
+            <div class="field-label" style="margin-top:0;">Blocked Sites</div>
+            <button class="syntax-help-link btn-open-syntax-help">Syntax Guide</button>
+          </div>
           <textarea id="mode-domains-textarea" rows="12"
-            placeholder="domain1.com                                 # blocks domain1.com&#10;domain2.com; 15                           # sets daily timer for domain2.com for 15 minutes&#10;domain3.com, domain4.com; 15              # sets daily limit for combined domain usage to 15 minutes&#10;youtube.com/shorts                        # blocks specific URL path&#10;.pdf                                            # blocks all PDF files&#10;.xyz                                            # blocks all .xyz domain extensions&#10;keyword                                         # blocks any URL containing keyword&#10;!music.youtube.com/listen                 # allowlist exception (bypasses blocks)"></textarea>
+            placeholder="youtube.com/shorts&#10;facebook.com; 30&#10;reddit.com"></textarea>
           <div class="textarea-error" id="textarea-error" style="display:none;"></div>
         </div>
 
@@ -130,9 +134,12 @@
               </div>
             </div>
 
-            <div class="field-label" style="margin-top:0;">Always Blocked Sites</div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top:0;">
+              <div class="field-label" style="margin-top:0;">Always Blocked Sites</div>
+              <button class="syntax-help-link btn-open-syntax-help">Syntax Guide</button>
+            </div>
             <textarea id="perpetual-domains-textarea" rows="10"
-              placeholder="domain1.com                                 # blocks domain1.com&#10;domain2.com; 15                           # sets daily timer for domain2.com for 15 minutes&#10;youtube.com/shorts                        # blocks specific URL path&#10;.pdf                                            # blocks all PDF files&#10;.xyz                                            # blocks all .xyz domain extensions&#10;!music.youtube.com/listen                 # allowlist exception (bypasses blocks)"></textarea>
+              placeholder="youtube.com/shorts&#10;facebook.com; 30&#10;reddit.com"></textarea>
             <div class="textarea-error" id="perpetual-textarea-error" style="display:none;"></div>
           </div>
         </div>
@@ -244,6 +251,64 @@
         <h2 class="section-title">Analytics</h2>
         <p class="section-desc">Analytics for your timers. Resets at midnight.</p>
         <div id="analytics-content"></div>
+      </section>
+
+      <!-- ===== HELP & SYNTAX ===== -->
+      <section class="section" id="section-help">
+        <h2 class="section-title">Help &amp; Syntax Guide</h2>
+        <p class="section-desc">Learn how to write custom block rules, time limits, and exceptions.</p>
+
+        <div class="syntax-guide-container">
+          <div class="syntax-card">
+            <div class="syntax-card-title">Supported Rule Formats</div>
+            <table class="syntax-table">
+              <thead>
+                <tr>
+                  <th>Format / Example</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>facebook.com</code></td>
+                  <td><strong>Standard Block</strong>: Blocks the domain and all of its subdomains (e.g. <code>blog.facebook.com</code>).</td>
+                </tr>
+                <tr>
+                  <td><code>youtube.com; 15</code></td>
+                  <td><strong>Daily Time Limit</strong>: Grants 15 minutes of daily browse time. Blocks site once limit expires (resets at midnight).</td>
+                </tr>
+                <tr>
+                  <td><code>reddit.com, twitter.com; 30</code></td>
+                  <td><strong>Combined Daily Limit</strong>: Shares a single 30-minute daily timer pool across multiple domains.</td>
+                </tr>
+                <tr>
+                  <td><code>youtube.com/shorts</code></td>
+                  <td><strong>Specific Path Block</strong>: Blocks specific subpaths while allowing the rest of the website.</td>
+                </tr>
+                <tr>
+                  <td><code>.pdf</code></td>
+                  <td><strong>File Extension Filter</strong>: Blocks all files or URLs ending with <code>.pdf</code>.</td>
+                </tr>
+                <tr>
+                  <td><code>.xyz</code></td>
+                  <td><strong>TLD Extension Filter</strong>: Blocks any website registered under the <code>.xyz</code> top-level domain.</td>
+                </tr>
+                <tr>
+                  <td><code>gaming</code></td>
+                  <td><strong>Keyword Block</strong>: Blocks any URL containing the word "gaming".</td>
+                </tr>
+                <tr>
+                  <td><code>!music.youtube.com</code></td>
+                  <td><strong>Allowlist Exception</strong>: Overrides block rules with a <code>!</code> prefix to explicitly allow access.</td>
+                </tr>
+                <tr>
+                  <td><code># note or comment</code></td>
+                  <td><strong>Comments</strong>: Lines or text after <code>#</code> are ignored so you can add notes to your block list.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </section>
 
       <!-- ===== OTHER ===== -->
