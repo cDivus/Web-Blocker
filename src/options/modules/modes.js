@@ -175,10 +175,14 @@ function parseTextareaEntries(textareaId, errorElId) {
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    if (!line.trim()) continue;
-
     const result = parseLine(line);
     if (!result) continue;
+
+    if (result.isBlank) {
+      entries.push(result);
+      continue;
+    }
+
     if (result.error) {
       errors.push(`Line ${i + 1}: ${result.error}`);
       continue;

@@ -82,7 +82,7 @@
 
           <div class="field-label" style="margin-top:0;">Blocked Sites</div>
           <textarea id="mode-domains-textarea" rows="12"
-            placeholder="domain1.com                                 // blocks domain1.com&#10;domain2.com; 15                           // sets daily timer for domain2.com for 15 minutes&#10;keyword                                         // blocks any hostname containing keyword&#10;domain3.com, domain4.com; 15   // sets daily limit for combined domain usage to 15 minutes&#10;!music.youtube.com                      // allowlist exception (bypasses blocks)"></textarea>
+            placeholder="domain1.com                                 # blocks domain1.com&#10;domain2.com; 15                           # sets daily timer for domain2.com for 15 minutes&#10;domain3.com, domain4.com; 15              # sets daily limit for combined domain usage to 15 minutes&#10;youtube.com/shorts                        # blocks specific URL path&#10;.pdf                                            # blocks all PDF files&#10;.xyz                                            # blocks all .xyz domain extensions&#10;keyword                                         # blocks any URL containing keyword&#10;!music.youtube.com/listen                 # allowlist exception (bypasses blocks)"></textarea>
           <div class="textarea-error" id="textarea-error" style="display:none;"></div>
         </div>
 
@@ -132,7 +132,7 @@
 
             <div class="field-label" style="margin-top:0;">Always Blocked Sites</div>
             <textarea id="perpetual-domains-textarea" rows="10"
-              placeholder="domain1.com                                 // blocks domain1.com&#10;domain2.com; 15                           // sets daily timer for domain2.com for 15 minutes&#10;keyword                                         // blocks any hostname containing keyword&#10;!music.youtube.com                      // allowlist exception"></textarea>
+              placeholder="domain1.com                                 # blocks domain1.com&#10;domain2.com; 15                           # sets daily timer for domain2.com for 15 minutes&#10;youtube.com/shorts                        # blocks specific URL path&#10;.pdf                                            # blocks all PDF files&#10;.xyz                                            # blocks all .xyz domain extensions&#10;!music.youtube.com/listen                 # allowlist exception (bypasses blocks)"></textarea>
             <div class="textarea-error" id="perpetual-textarea-error" style="display:none;"></div>
           </div>
         </div>

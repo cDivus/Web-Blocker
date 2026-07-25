@@ -1,66 +1,61 @@
-// ===== UTILS & HELPERS =====
+import { normalizeDomain } from '../../common/utils.js';
 
-export function normalizeDomain(raw) {
-  let trimmed = raw.trim().toLowerCase();
-  if (!trimmed) return '';
-  const isAllowlist = trimmed.startsWith('!');
-  if (isAllowlist) {
-    trimmed = trimmed.slice(1).trim();
-  }
-  if (trimmed.includes(' ')) return ''; // Spaces are never allowed in domains or keywords!
-  if (!trimmed.includes('.')) return isAllowlist ? '!' + trimmed : trimmed; // keyword
-  try {
-    let url = trimmed;
-    if (!url.startsWith('http')) url = 'https://' + url;
-    const host = new URL(url).hostname.replace(/^www\./, '');
-    return isAllowlist ? '!' + host : host;
-  } catch {
-    const host = trimmed.replace(/^www\./, '');
-    return isAllowlist ? '!' + host : host;
-  }
-}
+export { normalizeDomain };
 
 /**
- * Parse a single textarea line into { domain, limitMinutes } or null on error.
+ * Parse a single textarea line into { domain, limitMinutes, rawLine } or error object.
  */
 export function parseLine(line) {
-  const trimmed = line.trim();
-  if (!trimmed) return null; // blank — skip, not an error
+  if (!line || !line.trim()) {
+    return { domain: '', limitMinutes: null, isBlank: true, rawLine: line };
+  }
 
-  const parts = trimmed.split(';');
-  if (parts.length > 2) return { error: `Too many semicolons: "${trimmed}"` };
+  // Strip comment starting with #
+  let cleanLine = line;
+  const hashIdx = line.indexOf('#');
+  if (hashIdx !== -1) {
+    cleanLine = line.slice(0, hashIdx);
+  }
+
+  if (!cleanLine.trim()) {
+    return { domain: '', limitMinutes: null, isBlank: true, isComment: true, rawLine: line };
+  }
+
+  const parts = cleanLine.split(';');
+  if (parts.length > 2) return { error: `Too many semicolons: "${line.trim()}"` };
 
   const rawDomains = parts[0].split(',').map(s => s.trim()).filter(Boolean);
-  if (rawDomains.length === 0) return { error: `Invalid empty domains list: "${parts[0]}"` };
+  if (rawDomains.length === 0) return { error: `Invalid empty entry: "${parts[0]}"` };
 
   const normalizedItems = [];
   for (const item of rawDomains) {
     const norm = normalizeDomain(item);
-    if (!norm) return { error: `Invalid domain or keyword: "${item}"` };
+    if (!norm) return { error: `Invalid entry: "${item}"` };
     normalizedItems.push(norm);
   }
   const domainPattern = normalizedItems.join(', ');
 
   if (parts.length === 1) {
-    return { domain: domainPattern, limitMinutes: null };
+    return { domain: domainPattern, limitMinutes: null, rawLine: line };
   }
 
   const minStr = parts[1].trim();
-  if (minStr === '') return { error: `Missing minutes after semicolon: "${trimmed}"` };
+  if (minStr === '') return { error: `Missing minutes after semicolon: "${line.trim()}"` };
   const mins = Number(minStr);
   if (!Number.isInteger(mins) || mins <= 0) {
     return { error: `Minutes must be a positive integer, got: "${minStr}"` };
   }
-  return { domain: domainPattern, limitMinutes: mins };
+  return { domain: domainPattern, limitMinutes: mins, rawLine: line };
 }
 
 /**
- * Serialize entries back into textarea text.
+ * Serialize entries back into textarea text, preserving exact raw lines / newlines.
  */
 export function serializeEntries(entries) {
   return (entries || []).map(e => {
+    if (e.rawLine != null) return e.rawLine;
     if (e.limitMinutes != null) return `${e.domain}; ${e.limitMinutes}`;
-    return e.domain;
+    return e.domain || '';
   }).join('\n');
 }
 

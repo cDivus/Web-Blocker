@@ -1,32 +1,86 @@
-import { normalizeDomain, getLocalDateString } from './src/common/utils.js';
+import { normalizeDomain, stripProtocolAndWww, getLocalDateString } from './src/common/utils.js';
 
 // ===== UTILITY =====
 
-function getDomainFromUrl(url) {
-  try { return new URL(url).hostname.toLowerCase().replace(/^www\./, ''); }
-  catch { return null; }
-}
-
-function singleEntryMatches(hostname, entryPart) {
-  const trimmed = entryPart.trim();
-  if (!trimmed.includes('.')) {
-    return hostname.includes(trimmed);
+function getNormalizedUrl(url) {
+  if (!url || /^(chrome|chrome-extension|moz-extension|about|edge):/.test(url)) return null;
+  try {
+    const parsed = new URL(url);
+    const hostname = parsed.hostname.toLowerCase().replace(/^www\./, '');
+    const pathname = parsed.pathname.toLowerCase();
+    const search = parsed.search.toLowerCase();
+    const fullUrl = (hostname + pathname + search).replace(/\/$/, '');
+    return { fullUrl, hostname, pathname };
+  } catch {
+    const cleaned = stripProtocolAndWww(url.toLowerCase());
+    return { fullUrl: cleaned, hostname: cleaned.split('/')[0], pathname: '' };
   }
-  return hostname === trimmed || hostname.endsWith('.' + trimmed);
 }
 
-function entryMatches(hostname, entryDomain) {
+function getDomainFromUrl(url) {
+  const norm = getNormalizedUrl(url);
+  return norm ? norm.hostname : null;
+}
+
+function singleEntryMatches(urlObj, entryPart) {
+  if (!urlObj || !entryPart) return false;
+  let trimmed = entryPart.trim().toLowerCase();
+  if (!trimmed) return false;
+
+  // Strip comments starting with #
+  const hashIdx = trimmed.indexOf('#');
+  if (hashIdx !== -1) {
+    trimmed = trimmed.slice(0, hashIdx).trim();
+  }
+  if (!trimmed) return false;
+
+  if (trimmed.startsWith('!')) {
+    trimmed = trimmed.slice(1).trim();
+  }
+  if (!trimmed) return false;
+
+  trimmed = stripProtocolAndWww(trimmed);
+
+  // 1. Extension rule (starts with ., e.g. .pdf, .xyz, .mp4)
+  if (trimmed.startsWith('.')) {
+    return urlObj.hostname.endsWith(trimmed) ||
+           urlObj.pathname.endsWith(trimmed) ||
+           urlObj.fullUrl.endsWith(trimmed);
+  }
+
+  // 2. Path or Full URL rule (contains /, e.g. youtube.com/shorts, reddit.com/r/memes)
+  if (trimmed.includes('/')) {
+    const cleanEntry = trimmed.replace(/\/$/, '');
+    return urlObj.fullUrl.includes(cleanEntry) || urlObj.fullUrl.startsWith(cleanEntry);
+  }
+
+  // 3. Domain rule (contains ., e.g. youtube.com, music.youtube.com)
+  if (trimmed.includes('.')) {
+    return urlObj.hostname === trimmed ||
+           urlObj.hostname.endsWith('.' + trimmed) ||
+           urlObj.fullUrl.startsWith(trimmed);
+  }
+
+  // 4. Keyword rule (e.g. shorts, gaming)
+  return urlObj.fullUrl.includes(trimmed);
+}
+
+function entryMatches(urlObj, entryDomain) {
+  if (!urlObj || !entryDomain) return false;
+  const target = typeof urlObj === 'string' ? getNormalizedUrl(urlObj) : urlObj;
+  if (!target) return false;
   const parts = entryDomain.split(',').map(s => s.trim()).filter(Boolean);
-  return parts.some(p => singleEntryMatches(hostname, p));
+  return parts.some(p => singleEntryMatches(target, p));
 }
 
-/** Return the raw entry object { domain, limitMinutes } for this hostname, or null. */
-function findMatchingEntry(hostname, entries) {
-  // Only match against blocklist entries (those that do NOT start with "!")
+/** Return the raw entry object { domain, limitMinutes } for this URL, or null. */
+function findMatchingEntry(urlObj, entries) {
+  const target = typeof urlObj === 'string' ? getNormalizedUrl(urlObj) : urlObj;
+  if (!target) return null;
   return (entries || []).find(e => {
     const d = (typeof e === 'string') ? e : e.domain;
     if (!d || d.startsWith('!')) return false;
-    return entryMatches(hostname, d);
+    return entryMatches(target, d);
   }) || null;
 }
 
@@ -90,11 +144,15 @@ async function shouldBlock(url) {
 
   if (data.enabled === false) return false;
 
-  const req = getDomainFromUrl(url);
-  if (!req) return false;
+  const urlObj = getNormalizedUrl(url);
+  if (!urlObj) return false;
 
   const now = Date.now();
   const tmp = data.tempUnblocks || {};
+
+  if ((tmp[urlObj.hostname] && tmp[urlObj.hostname] > now) || (tmp[urlObj.fullUrl] && tmp[urlObj.fullUrl] > now)) {
+    return false;
+  }
 
   // 1. Check Perpetual Block list first (if section is enabled)
   const isPerpetualEnabled = data.perpetualSectionEnabled !== false;
@@ -103,20 +161,18 @@ async function shouldBlock(url) {
     const hasPerpetualAllowlist = perpetualDomains.some(e => {
       const d = (typeof e === 'string') ? e : e.domain;
       if (!d || !d.startsWith('!')) return false;
-      return entryMatches(req, d.slice(1));
+      return entryMatches(urlObj, d);
     });
 
     if (!hasPerpetualAllowlist) {
-      const matchedPerpetual = findMatchingEntry(req, perpetualDomains);
+      const matchedPerpetual = findMatchingEntry(urlObj, perpetualDomains);
       if (matchedPerpetual) {
-        if (!tmp[req] || tmp[req] <= now) {
-          const entry = typeof matchedPerpetual === 'string' ? { domain: matchedPerpetual, limitMinutes: null } : matchedPerpetual;
-          if (entry.limitMinutes != null) {
-            const usedMs = await getTimerUsage(entry.domain);
-            if (usedMs >= entry.limitMinutes * 60 * 1000) return true;
-          } else {
-            return true;
-          }
+        const entry = typeof matchedPerpetual === 'string' ? { domain: matchedPerpetual, limitMinutes: null } : matchedPerpetual;
+        if (entry.limitMinutes != null) {
+          const usedMs = await getTimerUsage(entry.domain);
+          if (usedMs >= entry.limitMinutes * 60 * 1000) return true;
+        } else {
+          return true;
         }
       }
     }
@@ -130,8 +186,7 @@ async function shouldBlock(url) {
   const hasAllowlistMatch = (activeMode.domains || []).some(e => {
     const d = (typeof e === 'string') ? e : e.domain;
     if (!d || !d.startsWith('!')) return false;
-    const stripped = d.slice(1);
-    return entryMatches(req, stripped);
+    return entryMatches(urlObj, d);
   });
 
   if (hasAllowlistMatch) {
@@ -139,10 +194,8 @@ async function shouldBlock(url) {
   }
 
   // Otherwise check Blocklist
-  const matchedEntry = findMatchingEntry(req, activeMode.domains);
+  const matchedEntry = findMatchingEntry(urlObj, activeMode.domains);
   if (!matchedEntry) return false;
-
-  if (tmp[req] && tmp[req] > now) return false;
 
   // Timer check: if this entry has a daily limit, check usage
   const entry = typeof matchedEntry === 'string'
@@ -226,20 +279,19 @@ async function _updateTrackerImpl() {
   let activeTabUrl = null;
   
   if (isEnabled && isBrowserFocused && activeTab && activeTab.url && !/^(chrome|chrome-extension|moz-extension|about|edge):/.test(activeTab.url)) {
-    const domain = getDomainFromUrl(activeTab.url);
-    if (domain) {
+    const urlObj = getNormalizedUrl(activeTab.url);
+    if (urlObj) {
       const activeMode = getActiveModeAtTime(data, Date.now());
       if (activeMode) {
         // First check if domain matches any allowlist entries:
         const isAllowed = (activeMode.domains || []).some(e => {
           const d = (typeof e === 'string') ? e : e.domain;
           if (!d || !d.startsWith('!')) return false;
-          const stripped = d.slice(1);
-          return entryMatches(domain, stripped);
+          return entryMatches(urlObj, d);
         });
 
         if (!isAllowed) {
-          const matched = findMatchingEntry(domain, activeMode.domains);
+          const matched = findMatchingEntry(urlObj, activeMode.domains);
           if (matched) {
             const entry = typeof matched === 'string' ? { domain: matched, limitMinutes: null } : matched;
             if (entry.limitMinutes != null) {
