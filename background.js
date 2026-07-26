@@ -339,6 +339,15 @@ chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
   return true;
 });
 
+async function checkAndRedirectBlockedTabs() {
+  const tabs = await chrome.tabs.query({});
+  for (const t of tabs) {
+    if (t.url && await shouldBlock(t.url)) {
+      chrome.tabs.update(t.id, { url: chrome.runtime.getURL('src/blocked/blocked.html') + '?blocked=' + encodeURIComponent(t.url) });
+    }
+  }
+}
+
 async function handle(msg) {
   const { action } = msg;
 
@@ -383,6 +392,7 @@ async function handle(msg) {
   } else if (action === 'setActiveMode') {
     await set({ activeModeId: msg.modeId || null });
     await updateTracker();
+    await checkAndRedirectBlockedTabs();
     return { ok: true };
 
   } else if (action === 'createMode') {
@@ -425,14 +435,7 @@ async function handle(msg) {
     );
     await set({ modes });
     await updateTracker();
-
-    // Redirect matching tabs immediately
-    const tabs = await chrome.tabs.query({});
-    for (const t of tabs) {
-      if (t.url && await shouldBlock(t.url)) {
-        chrome.tabs.update(t.id, { url: chrome.runtime.getURL('src/blocked/blocked.html') + '?blocked=' + encodeURIComponent(t.url) });
-      }
-    }
+    await checkAndRedirectBlockedTabs();
     return { ok: true };
 
   } else if (action === 'savePerpetualBlock') {
@@ -441,20 +444,14 @@ async function handle(msg) {
     );
     await set({ perpetualBlock });
     await updateTracker();
-
-    // Redirect matching tabs immediately
-    const tabs = await chrome.tabs.query({});
-    for (const t of tabs) {
-      if (t.url && await shouldBlock(t.url)) {
-        chrome.tabs.update(t.id, { url: chrome.runtime.getURL('src/blocked/blocked.html') + '?blocked=' + encodeURIComponent(t.url) });
-      }
-    }
+    await checkAndRedirectBlockedTabs();
     return { ok: true, perpetualBlock };
 
   } else if (action === 'setPerpetualSectionEnabled') {
     const enabled = msg.enabled !== false;
     await set({ perpetualSectionEnabled: enabled });
     await updateTracker();
+    await checkAndRedirectBlockedTabs();
     return { ok: true, perpetualSectionEnabled: enabled };
 
   } else if (action === 'addDomain') {
@@ -476,14 +473,7 @@ async function handle(msg) {
     if (!alreadyExists) modes[idx].domains.push({ domain, limitMinutes: null });
     await set({ modes });
     await updateTracker();
-
-    // Redirect matching tabs immediately
-    const tabs = await chrome.tabs.query({});
-    for (const t of tabs) {
-      if (t.url && await shouldBlock(t.url)) {
-        chrome.tabs.update(t.id, { url: chrome.runtime.getURL('src/blocked/blocked.html') + '?blocked=' + encodeURIComponent(t.url) });
-      }
-    }
+    await checkAndRedirectBlockedTabs();
     return { ok: true, domain, mode: modes[idx] };
 
   } else if (action === 'setGlobalSchedule') {
@@ -493,6 +483,7 @@ async function handle(msg) {
     }
     await set(upd);
     await updateTracker();
+    await checkAndRedirectBlockedTabs();
     return { ok: true };
 
   } else if (action === 'saveBlockPage') {
