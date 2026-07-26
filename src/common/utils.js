@@ -1,107 +1,138 @@
 /**
- * Strips leading protocols (http://, https://) and www. prefix.
- */
-export function stripProtocolAndWww(str) {
-  if (!str) return '';
-  return str.replace(/^https?:\/\//, '').replace(/^www\./, '');
-}
-
-/**
- * Normalizes a domain input. Handles optional allowlist '!' prefix.
- * Removes 'www.' prefix and protocols.
- */
-export function normalizeDomain(input) {
-  let trimmed = input.trim().toLowerCase();
-  if (!trimmed) return '';
-  const isAllowlist = trimmed.startsWith('!');
-  if (isAllowlist) {
-    trimmed = trimmed.slice(1).trim();
-  }
-  if (!trimmed) return '';
-
-  let cleaned = stripProtocolAndWww(trimmed).replace(/\/+$/, '');
-  return isAllowlist ? '!' + cleaned : cleaned;
-}
-
-/**
  * Parses a raw URL into structured components for pattern matching.
+ * Handles the stripping of protocols, www. prefix, and trailing slashes internally.
  */
-export function getNormalizedUrl(url) {
-  if (!url || /^(chrome|chrome-extension|moz-extension|about|edge):/.test(url)) return null;
+export function parseUrl(url) {
+  if (!url) return null;
+  let trimmed = url.trim().toLowerCase();
+  if (!trimmed || /^(chrome|chrome-extension|moz-extension|about|edge):/.test(trimmed)) return null;
+
+  const strip = (str) => str.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/+$/, '');
+
   try {
-    const parsed = new URL(url);
-    const hostname = parsed.hostname.toLowerCase().replace(/^www\./, '');
+    const urlToParse = trimmed.includes('://') ? trimmed : 'http://' + trimmed;
+    const parsed = new URL(urlToParse);
+    const hostname = strip(parsed.hostname);
     const pathname = parsed.pathname.toLowerCase();
     const search = parsed.search.toLowerCase();
-    const fullUrl = (hostname + pathname + search).replace(/\/+$/, '');
-    return { fullUrl: fullUrl || hostname, hostname, pathname };
+    const fullUrl = strip(hostname + pathname + search);
+    return { fullUrl, hostname, pathname };
   } catch {
-    const cleaned = stripProtocolAndWww(url.toLowerCase()).replace(/\/+$/, '');
+    const cleaned = strip(trimmed);
     return { fullUrl: cleaned, hostname: cleaned.split('/')[0], pathname: '' };
   }
 }
 
 /**
- * Checks if a URL matches a single domain/path/keyword rule.
+ * Parses any rule input or line into structured rule properties.
+ * Handles comment stripping (#), allowlist prefix (!), time limit (; mins),
+ * comma-separated sub-patterns, and domain cleaning via parseUrl.
  */
-export function singleEntryMatches(urlObj, entryPart) {
-  if (!urlObj || !entryPart) return false;
-  let trimmed = entryPart.trim().toLowerCase();
-  if (!trimmed) return false;
+export function parseLine(input) {
+  if (!input || !input.trim()) {
+    return { domain: '', limitMinutes: null, patterns: [], isAllowlist: false, isBlank: true, rawLine: input || '' };
+  }
 
-  const hashIdx = trimmed.indexOf('#');
+  let cleanLine = input.trim();
+  const hashIdx = cleanLine.indexOf('#');
   if (hashIdx !== -1) {
-    trimmed = trimmed.slice(0, hashIdx).trim();
-  }
-  if (!trimmed) return false;
-
-  if (trimmed.startsWith('!')) {
-    trimmed = trimmed.slice(1).trim();
-  }
-  if (!trimmed) return false;
-
-  trimmed = stripProtocolAndWww(trimmed).replace(/\/+$/, '');
-
-  // 1. Extension rule
-  if (trimmed.startsWith('.')) {
-    return urlObj.hostname.endsWith(trimmed) ||
-           urlObj.pathname.endsWith(trimmed) ||
-           urlObj.fullUrl.endsWith(trimmed);
+    cleanLine = cleanLine.slice(0, hashIdx).trim();
   }
 
-  // 2. Path or Full URL rule (contains /)
-  if (trimmed.includes('/')) {
-    const cleanEntry = trimmed.replace(/\/+$/, '');
-    return urlObj.fullUrl.includes(cleanEntry) || urlObj.fullUrl.startsWith(cleanEntry);
+  if (!cleanLine) {
+    return { domain: '', limitMinutes: null, patterns: [], isAllowlist: false, isBlank: true, isComment: true, rawLine: input };
   }
 
-  // 3. Domain rule (contains .)
-  if (trimmed.includes('.')) {
-    return urlObj.hostname === trimmed ||
-           urlObj.hostname.endsWith('.' + trimmed) ||
-           urlObj.fullUrl.startsWith(trimmed);
+  const isAllowlist = cleanLine.startsWith('!');
+  if (isAllowlist) {
+    cleanLine = cleanLine.slice(1).trim();
+  }
+  if (!cleanLine) {
+    return { error: `Invalid empty entry: "${input.trim()}"`, domain: '', limitMinutes: null, patterns: [], isAllowlist, rawLine: input };
   }
 
-  // 4. Keyword rule
-  return urlObj.fullUrl.includes(trimmed);
+  const parts = cleanLine.split(';');
+  if (parts.length > 2) {
+    return { error: `Too many semicolons: "${input.trim()}"`, domain: '', limitMinutes: null, patterns: [], isAllowlist, rawLine: input };
+  }
+
+  const rawPatterns = parts[0].split(',').map(s => s.trim()).filter(Boolean);
+  if (rawPatterns.length === 0) {
+    return { error: `Invalid empty entry: "${parts[0]}"`, domain: '', limitMinutes: null, patterns: [], isAllowlist, rawLine: input };
+  }
+
+  const patterns = [];
+  for (const item of rawPatterns) {
+    if (item.startsWith('.')) {
+      patterns.push(item.toLowerCase());
+    } else {
+      const parsed = parseUrl(item);
+      const cleaned = parsed ? parsed.fullUrl : item.toLowerCase();
+      if (!cleaned) return { error: `Invalid entry: "${item}"`, domain: '', limitMinutes: null, patterns: [], isAllowlist, rawLine: input };
+      patterns.push(cleaned);
+    }
+  }
+
+  let limitMinutes = null;
+  if (parts.length === 2) {
+    const minStr = parts[1].trim();
+    if (minStr === '') {
+      return { error: `Missing minutes after semicolon: "${input.trim()}"`, domain: '', limitMinutes: null, patterns: [], isAllowlist, rawLine: input };
+    }
+    const mins = Number(minStr);
+    if (!Number.isInteger(mins) || mins <= 0) {
+      return { error: `Minutes must be a positive integer, got: "${minStr}"`, domain: '', limitMinutes: null, patterns: [], isAllowlist, rawLine: input };
+    }
+    limitMinutes = mins;
+  }
+
+  const formattedDomain = (isAllowlist ? '!' : '') + patterns.join(', ');
+  return {
+    domain: formattedDomain,
+    limitMinutes,
+    patterns,
+    isAllowlist,
+    isBlank: false,
+    isComment: false,
+    rawLine: input
+  };
 }
 
 /**
- * Checks if a URL matches a comma-separated list of domain rules.
+ * Checks if a URL matches a rule string (domain, path, keyword, comma-separated list, or allowlist).
  */
 export function entryMatches(urlObj, entryDomain) {
   if (!urlObj || !entryDomain) return false;
-  const target = typeof urlObj === 'string' ? getNormalizedUrl(urlObj) : urlObj;
+  const target = typeof urlObj === 'string' ? parseUrl(urlObj) : urlObj;
   if (!target) return false;
-  const parts = entryDomain.split(',').map(s => s.trim()).filter(Boolean);
-  return parts.some(p => singleEntryMatches(target, p));
+
+  const rule = parseLine(entryDomain);
+  if (!rule || rule.error || !rule.patterns.length) return false;
+
+  return rule.patterns.some(pattern => {
+    if (pattern.startsWith('.')) {
+      return target.hostname.endsWith(pattern) ||
+             target.pathname.endsWith(pattern) ||
+             target.fullUrl.endsWith(pattern);
+    }
+    if (pattern.includes('/')) {
+      const cleanEntry = pattern.replace(/\/+$/, '');
+      return target.fullUrl.includes(cleanEntry) || target.fullUrl.startsWith(cleanEntry);
+    }
+    if (pattern.includes('.')) {
+      return target.hostname === pattern ||
+             target.hostname.endsWith('.' + pattern) ||
+             target.fullUrl.startsWith(pattern);
+    }
+    return target.fullUrl.includes(pattern);
+  });
 }
 
 /**
  * Returns the matching domain entry object or string from a domain list, or null.
  */
 export function findMatchingEntry(urlObj, entries) {
-  const target = typeof urlObj === 'string' ? getNormalizedUrl(urlObj) : urlObj;
+  const target = typeof urlObj === 'string' ? parseUrl(urlObj) : urlObj;
   if (!target) return null;
   return (entries || []).find(e => {
     const d = (typeof e === 'string') ? e : e.domain;
@@ -120,6 +151,32 @@ export function getLocalDateString() {
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+/**
+ * Returns the currently active mode based on state and schedule.
+ * Works with both manual activation and schedule-based activation.
+ */
+export function getActiveMode(data, timestamp = Date.now()) {
+  if (data.enabled === false) return null;
+
+  const modes = data.modes || [];
+
+  if (data.scheduleEnabled) {
+    const globalSchedule = data.globalSchedule || {};
+    const d = new Date(timestamp);
+    const key = `${d.getDay()}-${d.getHours()}`;
+    const scheduledModeId = globalSchedule[key];
+    if (scheduledModeId) {
+      return modes.find(m => m.id === scheduledModeId) || null;
+    }
+    return null;
+  }
+
+  if (data.activeModeId) {
+    return modes.find(m => m.id === data.activeModeId) || null;
+  }
+  return null;
 }
 
 export const DEFAULT_QUOTES = [

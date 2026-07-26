@@ -198,15 +198,11 @@ export async function saveQuotesFromTextarea() {
   renderBlockPage(true, hasErrors);
 }
 
-export function compileCustomBlockPage(html, assets) {
-  return sanitizeCustomHtml(html, assets);
-}
-
 export function renderCustomPreview(html, assets) {
   const iframe = document.getElementById('custom-preview-iframe');
   const container = document.getElementById('custom-preview-container');
   if (iframe && container) {
-    iframe.srcdoc = compileCustomBlockPage(html, assets);
+    iframe.srcdoc = sanitizeCustomHtml(html, assets);
     container.style.display = 'block';
   }
 }

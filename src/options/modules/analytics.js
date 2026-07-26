@@ -1,6 +1,6 @@
 // ===== ANALYTICS MODULE =====
 import { sendMsg } from './utils.js';
-import { getLocalDateString } from '../../common/utils.js';
+import { getLocalDateString, getActiveMode } from '../../common/utils.js';
 
 export async function renderAnalytics() {
   const container = document.getElementById('analytics-content');
@@ -11,18 +11,6 @@ export async function renderAnalytics() {
   const timerData  = await sendMsg('getTimers') || {};
   const siteTimers = timerData.siteTimers || {};
 
-  const getActiveMode = (s) => {
-    if (s.enabled === false) return null;
-    const modesList = s.modes || [];
-    if (s.scheduleEnabled) {
-      const globalSchedule = s.globalSchedule || {};
-      const now = new Date();
-      const key = `${now.getDay()}-${now.getHours()}`;
-      const scheduledModeId = globalSchedule[key];
-      return modesList.find(m => m.id === scheduledModeId) || null;
-    }
-    return modesList.find(m => m.id === s.activeModeId) || null;
-  };
 
   const activeMode = getActiveMode(freshState);
 

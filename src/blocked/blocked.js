@@ -1,4 +1,4 @@
-import { normalizeDomain, DEFAULT_QUOTES, sanitizeCustomHtml } from '../common/utils.js';
+import { parseUrl, DEFAULT_QUOTES, sanitizeCustomHtml } from '../common/utils.js';
 
 // Apply theme immediately on script load
 chrome.storage.local.get('theme', (data) => {
@@ -15,7 +15,7 @@ chrome.storage.onChanged.addListener((changes) => {
 // Parse blocked URL from query string
 const params = new URLSearchParams(window.location.search);
 const blockedUrl = params.get('blocked') || '';
-const blockedDomain = blockedUrl ? normalizeDomain(blockedUrl) : '';
+const blockedDomain = blockedUrl ? parseUrl(blockedUrl)?.hostname || blockedUrl : '';
 
 // Show the blocked URL
 if (blockedUrl) {
@@ -29,17 +29,13 @@ if (blockedUrl) {
   document.getElementById('blocked-url').style.display = 'none';
 }
 
-function compileCustomBlockPage(html, assets) {
-  return sanitizeCustomHtml(html, assets);
-}
-
 // Load custom block page message or custom ZIP/HTML template
 chrome.storage.local.get(['blockPageContent', 'blockPageType', 'customBlockHtml', 'customBlockAssets', 'blockPageUseQuotes', 'blockPageQuotes'], (data) => {
   document.title = `Blocked — ${blockedDomain || 'Web Blocker'}`;
 
   if (data.blockPageType === 'custom' && data.customBlockHtml) {
     try {
-      const compiled = compileCustomBlockPage(data.customBlockHtml, data.customBlockAssets || {});
+      const compiled = sanitizeCustomHtml(data.customBlockHtml, data.customBlockAssets || {});
       const iframe = document.getElementById('custom-frame');
       if (iframe && compiled) {
         iframe.srcdoc = compiled;

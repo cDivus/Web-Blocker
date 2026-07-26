@@ -1,46 +1,11 @@
 import {
-  normalizeDomain,
-  stripProtocolAndWww,
   getLocalDateString,
-  getNormalizedUrl,
-  singleEntryMatches,
+  getActiveMode,
+  parseUrl,
   entryMatches,
   findMatchingEntry
 } from './src/common/utils.js';
 
-// ===== UTILITY =====
-
-function getDomainFromUrl(url) {
-  const norm = getNormalizedUrl(url);
-  return norm ? norm.hostname : null;
-}
-
-function getActiveModeAtTime(data, timestamp) {
-  if (data.enabled === false) return null;
-
-  const modes = data.modes || [];
-  
-  if (data.scheduleEnabled) {
-    // 1. Schedule is enabled: follow the global calendar schedule only
-    const globalSchedule = data.globalSchedule || {};
-    const d2 = new Date(timestamp);
-    const day = d2.getDay(); // 0-6
-    const hour = d2.getHours(); // 0-23
-    const key = `${day}-${hour}`;
-    
-    const scheduledModeId = globalSchedule[key];
-    if (scheduledModeId) {
-      return modes.find(m => m.id === scheduledModeId) || null;
-    }
-    return null; // nothing blocked when no mode is scheduled
-  } else {
-    // 2. Schedule is disabled: follow the manually active mode
-    if (data.activeModeId) {
-      return modes.find(m => m.id === data.activeModeId) || null;
-    }
-    return null;
-  }
-}
 
 // ===== TIMER HELPERS =====
 const TODAY_KEY = () => getLocalDateString(); // 'YYYY-MM-DD'
@@ -75,7 +40,7 @@ async function shouldBlock(url) {
 
   if (data.enabled === false) return false;
 
-  const urlObj = getNormalizedUrl(url);
+  const urlObj = parseUrl(url);
   if (!urlObj) return false;
 
   const now = Date.now();
@@ -110,7 +75,7 @@ async function shouldBlock(url) {
   }
 
   // 2. Next check Active Mode list
-  const activeMode = getActiveModeAtTime(data, Date.now());
+  const activeMode = getActiveMode(data);
   if (!activeMode || !(activeMode.domains || []).length) return false;
 
   // Check Allowlist (exceptions starting with "!") first
@@ -210,9 +175,9 @@ async function _updateTrackerImpl() {
   let activeTabUrl = null;
   
   if (isEnabled && isBrowserFocused && activeTab && activeTab.url && !/^(chrome|chrome-extension|moz-extension|about|edge):/.test(activeTab.url)) {
-    const urlObj = getNormalizedUrl(activeTab.url);
+    const urlObj = parseUrl(activeTab.url);
     if (urlObj) {
-      const activeMode = getActiveModeAtTime(data, Date.now());
+      const activeMode = getActiveMode(data);
       if (activeMode) {
         // First check if domain matches any allowlist entries:
         const isAllowed = (activeMode.domains || []).some(e => {
@@ -455,13 +420,13 @@ async function handle(msg) {
     return { ok: true, perpetualSectionEnabled: enabled };
 
   } else if (action === 'addDomain') {
-    const domain = normalizeDomain(msg.domain);
+    const domain = msg.domain;
     if (!domain) { return { ok: false, error: 'Invalid domain' }; }
     const data = await get(['modes', 'activeModeId', 'globalSchedule', 'scheduleEnabled', 'enabled']);
     const modes = data.modes || [];
     
     // Detect currently active mode taking scheduling into account
-    const activeMode = getActiveModeAtTime(data, Date.now());
+    const activeMode = getActiveMode(data);
     if (!activeMode) { return { ok: false, error: 'No active mode' }; }
     
     const idx = modes.findIndex(m => m.id === activeMode.id);

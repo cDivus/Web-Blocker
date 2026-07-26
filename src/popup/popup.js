@@ -1,4 +1,4 @@
-import { normalizeDomain, getLocalDateString, getNormalizedUrl, findMatchingEntry } from '../common/utils.js';
+import { getLocalDateString, getActiveMode, parseUrl, findMatchingEntry } from '../common/utils.js';
 
 // Apply theme immediately on script load
 chrome.storage.local.get('theme', (data) => {
@@ -25,19 +25,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const state = await sendMsg('getState');
   const countEl = document.getElementById('blocked-count');
 
-  // Show active mode info (taking schedule into account)
-  const getActiveMode = (s) => {
-    if (s.enabled === false) return null;
-    const modesList = s.modes || [];
-    if (s.scheduleEnabled) {
-      const globalSchedule = s.globalSchedule || {};
-      const now = new Date();
-      const key = `${now.getDay()}-${now.getHours()}`;
-      const scheduledModeId = globalSchedule[key];
-      return modesList.find(m => m.id === scheduledModeId) || null;
-    }
-    return modesList.find(m => m.id === s.activeModeId) || null;
-  };
 
   const activeMode = getActiveMode(state);
   updateCount(countEl, activeMode);
@@ -48,17 +35,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   let isBlockable = false;
   let alreadyBlocked = false;
 
-  if (currentTabRes && currentTabRes.url) {
-    const urlObj = getNormalizedUrl(currentTabRes.url);
-    if (urlObj) {
-      isBlockable = true;
-    }
-
-    if (activeMode && isBlockable) {
+  if (currentTabRes?.url && parseUrl(currentTabRes.url)) {
+    isBlockable = true;
+    if (activeMode) {
       matchedEntry = findMatchingEntry(currentTabRes.url, activeMode.domains);
-      if (matchedEntry) {
-        alreadyBlocked = true;
-      }
+      alreadyBlocked = !!matchedEntry;
     }
   }
 
@@ -73,10 +54,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const updatePopupTimer = async () => {
       const timersRes = await sendMsg('getTimers');
-      const timers = (timersRes && timersRes.siteTimers) || {};
-      const today = getLocalDateString();
-      const rec = timers[matchedEntry.domain];
-      const usedMs = (rec && rec.date === today) ? (rec.usedMs || 0) : 0;
+      const rec = timersRes?.siteTimers?.[matchedEntry.domain];
+      const usedMs = rec?.date === getLocalDateString() ? (rec.usedMs || 0) : 0;
       const limitMs = matchedEntry.limitMinutes * 60 * 1000;
       const remMs = Math.max(0, limitMs - usedMs);
 
@@ -121,13 +100,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Block current site
   btnBlockCurrent.addEventListener('click', async () => {
     const res = await sendMsg('getCurrentTab');
-    if (!res || !res.url) return;
+    if (!res?.url) return;
 
-    const domain = normalizeDomain(res.url);
-    if (!domain) return;
+    const urlObj = parseUrl(res.url);
+    if (!urlObj?.hostname) return;
 
-    const addRes = await sendMsg('addDomain', { domain });
-    if (addRes && addRes.ok) {
+    const addRes = await sendMsg('addDomain', { domain: urlObj.hostname });
+    if (addRes?.ok) {
       updateCount(countEl, addRes.mode);
       alreadyBlocked = true;
       updateBlockCurrentButton();
@@ -141,11 +120,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const pwdInput = document.getElementById('popup-password-input');
   const pwdError = document.getElementById('popup-password-error');
 
-  if (state.password) {
-    pwdContainer.style.display = 'block';
-  } else {
-    pwdContainer.style.display = 'none';
-  }
+  pwdContainer.style.display = state.password ? 'block' : 'none';
 
   // Open settings
   document.getElementById('btn-settings').addEventListener('click', async () => {

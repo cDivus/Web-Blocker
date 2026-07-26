@@ -1,52 +1,6 @@
-import { normalizeDomain } from '../../common/utils.js';
+import { parseLine } from '../../common/utils.js';
 
-export { normalizeDomain };
-
-/**
- * Parse a single textarea line into { domain, limitMinutes, rawLine } or error object.
- */
-export function parseLine(line) {
-  if (!line || !line.trim()) {
-    return { domain: '', limitMinutes: null, isBlank: true, rawLine: line };
-  }
-
-  // Strip comment starting with #
-  let cleanLine = line;
-  const hashIdx = line.indexOf('#');
-  if (hashIdx !== -1) {
-    cleanLine = line.slice(0, hashIdx);
-  }
-
-  if (!cleanLine.trim()) {
-    return { domain: '', limitMinutes: null, isBlank: true, isComment: true, rawLine: line };
-  }
-
-  const parts = cleanLine.split(';');
-  if (parts.length > 2) return { error: `Too many semicolons: "${line.trim()}"` };
-
-  const rawDomains = parts[0].split(',').map(s => s.trim()).filter(Boolean);
-  if (rawDomains.length === 0) return { error: `Invalid empty entry: "${parts[0]}"` };
-
-  const normalizedItems = [];
-  for (const item of rawDomains) {
-    const norm = normalizeDomain(item);
-    if (!norm) return { error: `Invalid entry: "${item}"` };
-    normalizedItems.push(norm);
-  }
-  const domainPattern = normalizedItems.join(', ');
-
-  if (parts.length === 1) {
-    return { domain: domainPattern, limitMinutes: null, rawLine: line };
-  }
-
-  const minStr = parts[1].trim();
-  if (minStr === '') return { error: `Missing minutes after semicolon: "${line.trim()}"` };
-  const mins = Number(minStr);
-  if (!Number.isInteger(mins) || mins <= 0) {
-    return { error: `Minutes must be a positive integer, got: "${minStr}"` };
-  }
-  return { domain: domainPattern, limitMinutes: mins, rawLine: line };
-}
+export { parseLine };
 
 /**
  * Serialize entries back into textarea text, preserving exact raw lines / newlines.
