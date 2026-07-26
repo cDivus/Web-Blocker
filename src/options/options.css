@@ -876,17 +876,3 @@ select.schedule-mode-select:focus {
   white-space: nowrap;
   display: inline-block;
 }
-.syntax-help-link {
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  font-size: 0.78rem;
-  font-weight: 600;
-  cursor: pointer;
-  text-decoration: underline;
-  padding: 0;
-  transition: color 0.15s;
-}
-.syntax-help-link:hover {
-  color: var(--text-primary);
-}
