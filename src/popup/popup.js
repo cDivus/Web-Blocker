@@ -1,4 +1,4 @@
-import { normalizeDomain, getLocalDateString } from '../common/utils.js';
+import { normalizeDomain, getLocalDateString, getNormalizedUrl, findMatchingEntry } from '../common/utils.js';
 
 // Apply theme immediately on script load
 chrome.storage.local.get('theme', (data) => {
@@ -49,22 +49,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   let alreadyBlocked = false;
 
   if (currentTabRes && currentTabRes.url) {
-    const domain = normalizeDomain(currentTabRes.url);
-    if (domain && !/^(chrome|chrome-extension|moz-extension|about|edge):/.test(currentTabRes.url)) {
+    const urlObj = getNormalizedUrl(currentTabRes.url);
+    if (urlObj) {
       isBlockable = true;
     }
 
     if (activeMode && isBlockable) {
-      const hostname = normalizeDomain(currentTabRes.url);
-      matchedEntry = (activeMode.domains || []).find(e => {
-        const d = (typeof e === 'string') ? e : e.domain;
-        if (!d || d.startsWith('!')) return false;
-        const parts = d.split(',').map(s => s.trim()).filter(Boolean);
-        return parts.some(p => {
-          if (!p.includes('.')) return hostname.includes(p);
-          return hostname === p || hostname.endsWith('.' + p);
-        });
-      });
+      matchedEntry = findMatchingEntry(currentTabRes.url, activeMode.domains);
       if (matchedEntry) {
         alreadyBlocked = true;
       }

@@ -19,8 +19,95 @@ export function normalizeDomain(input) {
   }
   if (!trimmed) return '';
 
-  const cleaned = stripProtocolAndWww(trimmed);
+  let cleaned = stripProtocolAndWww(trimmed).replace(/\/+$/, '');
   return isAllowlist ? '!' + cleaned : cleaned;
+}
+
+/**
+ * Parses a raw URL into structured components for pattern matching.
+ */
+export function getNormalizedUrl(url) {
+  if (!url || /^(chrome|chrome-extension|moz-extension|about|edge):/.test(url)) return null;
+  try {
+    const parsed = new URL(url);
+    const hostname = parsed.hostname.toLowerCase().replace(/^www\./, '');
+    const pathname = parsed.pathname.toLowerCase();
+    const search = parsed.search.toLowerCase();
+    const fullUrl = (hostname + pathname + search).replace(/\/+$/, '');
+    return { fullUrl: fullUrl || hostname, hostname, pathname };
+  } catch {
+    const cleaned = stripProtocolAndWww(url.toLowerCase()).replace(/\/+$/, '');
+    return { fullUrl: cleaned, hostname: cleaned.split('/')[0], pathname: '' };
+  }
+}
+
+/**
+ * Checks if a URL matches a single domain/path/keyword rule.
+ */
+export function singleEntryMatches(urlObj, entryPart) {
+  if (!urlObj || !entryPart) return false;
+  let trimmed = entryPart.trim().toLowerCase();
+  if (!trimmed) return false;
+
+  const hashIdx = trimmed.indexOf('#');
+  if (hashIdx !== -1) {
+    trimmed = trimmed.slice(0, hashIdx).trim();
+  }
+  if (!trimmed) return false;
+
+  if (trimmed.startsWith('!')) {
+    trimmed = trimmed.slice(1).trim();
+  }
+  if (!trimmed) return false;
+
+  trimmed = stripProtocolAndWww(trimmed).replace(/\/+$/, '');
+
+  // 1. Extension rule
+  if (trimmed.startsWith('.')) {
+    return urlObj.hostname.endsWith(trimmed) ||
+           urlObj.pathname.endsWith(trimmed) ||
+           urlObj.fullUrl.endsWith(trimmed);
+  }
+
+  // 2. Path or Full URL rule (contains /)
+  if (trimmed.includes('/')) {
+    const cleanEntry = trimmed.replace(/\/+$/, '');
+    return urlObj.fullUrl.includes(cleanEntry) || urlObj.fullUrl.startsWith(cleanEntry);
+  }
+
+  // 3. Domain rule (contains .)
+  if (trimmed.includes('.')) {
+    return urlObj.hostname === trimmed ||
+           urlObj.hostname.endsWith('.' + trimmed) ||
+           urlObj.fullUrl.startsWith(trimmed);
+  }
+
+  // 4. Keyword rule
+  return urlObj.fullUrl.includes(trimmed);
+}
+
+/**
+ * Checks if a URL matches a comma-separated list of domain rules.
+ */
+export function entryMatches(urlObj, entryDomain) {
+  if (!urlObj || !entryDomain) return false;
+  const target = typeof urlObj === 'string' ? getNormalizedUrl(urlObj) : urlObj;
+  if (!target) return false;
+  const parts = entryDomain.split(',').map(s => s.trim()).filter(Boolean);
+  return parts.some(p => singleEntryMatches(target, p));
+}
+
+/**
+ * Returns the matching domain entry object or string from a domain list, or null.
+ */
+export function findMatchingEntry(urlObj, entries) {
+  const target = typeof urlObj === 'string' ? getNormalizedUrl(urlObj) : urlObj;
+  if (!target) return null;
+  return (entries || []).find(e => {
+    const d = (typeof e === 'string') ? e : e.domain;
+    if (!d || d.startsWith('!')) return false;
+    return entryMatches(target, d);
+  }) || null;
 }
 
 /**

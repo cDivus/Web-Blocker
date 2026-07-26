@@ -1,87 +1,18 @@
-import { normalizeDomain, stripProtocolAndWww, getLocalDateString } from './src/common/utils.js';
+import {
+  normalizeDomain,
+  stripProtocolAndWww,
+  getLocalDateString,
+  getNormalizedUrl,
+  singleEntryMatches,
+  entryMatches,
+  findMatchingEntry
+} from './src/common/utils.js';
 
 // ===== UTILITY =====
-
-function getNormalizedUrl(url) {
-  if (!url || /^(chrome|chrome-extension|moz-extension|about|edge):/.test(url)) return null;
-  try {
-    const parsed = new URL(url);
-    const hostname = parsed.hostname.toLowerCase().replace(/^www\./, '');
-    const pathname = parsed.pathname.toLowerCase();
-    const search = parsed.search.toLowerCase();
-    const fullUrl = (hostname + pathname + search).replace(/\/$/, '');
-    return { fullUrl, hostname, pathname };
-  } catch {
-    const cleaned = stripProtocolAndWww(url.toLowerCase());
-    return { fullUrl: cleaned, hostname: cleaned.split('/')[0], pathname: '' };
-  }
-}
 
 function getDomainFromUrl(url) {
   const norm = getNormalizedUrl(url);
   return norm ? norm.hostname : null;
-}
-
-function singleEntryMatches(urlObj, entryPart) {
-  if (!urlObj || !entryPart) return false;
-  let trimmed = entryPart.trim().toLowerCase();
-  if (!trimmed) return false;
-
-  // Strip comments starting with #
-  const hashIdx = trimmed.indexOf('#');
-  if (hashIdx !== -1) {
-    trimmed = trimmed.slice(0, hashIdx).trim();
-  }
-  if (!trimmed) return false;
-
-  if (trimmed.startsWith('!')) {
-    trimmed = trimmed.slice(1).trim();
-  }
-  if (!trimmed) return false;
-
-  trimmed = stripProtocolAndWww(trimmed);
-
-  // 1. Extension rule (starts with ., e.g. .pdf, .xyz, .mp4)
-  if (trimmed.startsWith('.')) {
-    return urlObj.hostname.endsWith(trimmed) ||
-           urlObj.pathname.endsWith(trimmed) ||
-           urlObj.fullUrl.endsWith(trimmed);
-  }
-
-  // 2. Path or Full URL rule (contains /, e.g. youtube.com/shorts, reddit.com/r/memes)
-  if (trimmed.includes('/')) {
-    const cleanEntry = trimmed.replace(/\/$/, '');
-    return urlObj.fullUrl.includes(cleanEntry) || urlObj.fullUrl.startsWith(cleanEntry);
-  }
-
-  // 3. Domain rule (contains ., e.g. youtube.com, music.youtube.com)
-  if (trimmed.includes('.')) {
-    return urlObj.hostname === trimmed ||
-           urlObj.hostname.endsWith('.' + trimmed) ||
-           urlObj.fullUrl.startsWith(trimmed);
-  }
-
-  // 4. Keyword rule (e.g. shorts, gaming)
-  return urlObj.fullUrl.includes(trimmed);
-}
-
-function entryMatches(urlObj, entryDomain) {
-  if (!urlObj || !entryDomain) return false;
-  const target = typeof urlObj === 'string' ? getNormalizedUrl(urlObj) : urlObj;
-  if (!target) return false;
-  const parts = entryDomain.split(',').map(s => s.trim()).filter(Boolean);
-  return parts.some(p => singleEntryMatches(target, p));
-}
-
-/** Return the raw entry object { domain, limitMinutes } for this URL, or null. */
-function findMatchingEntry(urlObj, entries) {
-  const target = typeof urlObj === 'string' ? getNormalizedUrl(urlObj) : urlObj;
-  if (!target) return null;
-  return (entries || []).find(e => {
-    const d = (typeof e === 'string') ? e : e.domain;
-    if (!d || d.startsWith('!')) return false;
-    return entryMatches(target, d);
-  }) || null;
 }
 
 function getActiveModeAtTime(data, timestamp) {
