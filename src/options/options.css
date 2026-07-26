@@ -824,11 +824,6 @@ select.schedule-mode-select:focus {
 }
 
 /* ===== SYNTAX GUIDE ===== */
-.syntax-guide-container {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
 .syntax-card {
   border: 1.5px solid var(--border-color);
   border-radius: 8px;

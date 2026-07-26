@@ -123,13 +123,13 @@ function setupGlobalListeners() {
         id: 'builtin-social', name: 'Focus', builtin: true, color: 'blue',
         domains: []
       }],
-      activeModeId: null,
+      activeModeId: 'builtin-social',
       globalSchedule: {},
       scheduleEnabled: false,
       tempUnblocks: {}, siteTimers: {},
       theme: 'teal',
       perpetualBlock: [],
-      perpetualSectionEnabled: true
+      perpetualSectionEnabled: false
     });
     
     // Refresh local memory

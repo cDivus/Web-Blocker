@@ -58,7 +58,7 @@ export function renderModes() {
 
   // Render Perpetual Block section visibility, toggle switch state, and site count
   const perpetualContainer = document.getElementById('perpetual-section-container');
-  const isPerpetualSectionEnabled = store.state.perpetualSectionEnabled !== false;
+  const isPerpetualSectionEnabled = store.state.perpetualSectionEnabled === true;
   if (perpetualContainer) {
     perpetualContainer.style.display = isPerpetualSectionEnabled ? 'block' : 'none';
   }
@@ -391,7 +391,7 @@ export function setupModesListeners() {
   // Toggle for hiding Perpetual Block section
   const togglePerpetualSection = document.getElementById('toggle-perpetual-section');
   if (togglePerpetualSection) {
-    togglePerpetualSection.checked = store.state.perpetualSectionEnabled !== false;
+    togglePerpetualSection.checked = store.state.perpetualSectionEnabled === true;
     togglePerpetualSection.addEventListener('change', async () => {
       const isEnabled = togglePerpetualSection.checked;
       store.state.perpetualSectionEnabled = isEnabled;

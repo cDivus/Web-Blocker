@@ -155,7 +155,7 @@ async function shouldBlock(url) {
   }
 
   // 1. Check Perpetual Block list first (if section is enabled)
-  const isPerpetualEnabled = data.perpetualSectionEnabled !== false;
+  const isPerpetualEnabled = data.perpetualSectionEnabled === true;
   const perpetualDomains = isPerpetualEnabled ? (data.perpetualBlock || []) : [];
   if (perpetualDomains.length > 0) {
     const hasPerpetualAllowlist = perpetualDomains.some(e => {
@@ -420,7 +420,7 @@ async function handle(msg) {
       ...data,
       enabled: data.enabled !== false,
       perpetualBlock: data.perpetualBlock || [],
-      perpetualSectionEnabled: data.perpetualSectionEnabled !== false
+      perpetualSectionEnabled: data.perpetualSectionEnabled === true
     };
 
   } else if (action === 'getTimers') {
@@ -604,12 +604,12 @@ chrome.runtime.onInstalled.addListener(async () => {
         color: 'blue',
         domains: []
       }],
-      activeModeId: null,
+      activeModeId: 'builtin-social',
       globalSchedule: {},
       scheduleEnabled: false,
       tempUnblocks: {}, siteTimers: {},
       perpetualBlock: [],
-      perpetualSectionEnabled: true
+      perpetualSectionEnabled: false
     });
   }
 });
