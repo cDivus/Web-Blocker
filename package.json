@@ -1,0 +1,12 @@
+{
+  "name": "web-blocker",
+  "version": "2.0.0",
+  "description": "The simplest Web Blocker & Timer. Customizable block modes, daily time limits, schedules, and block screens.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "zip:chrome": "cp manifest.chrome.json manifest.json && zip -r web-blocker-chrome.zip manifest.json background.js assets/ src/ -x \"assets/screenshots*\"",
+    "zip:firefox": "cp manifest.firefox.json manifest.json && zip -r web-blocker-firefox.zip manifest.json background.js assets/ src/ -x \"assets/screenshots*\" && cp manifest.chrome.json manifest.json",
+    "zip": "npm run zip:chrome && npm run zip:firefox"
+  }
+}
