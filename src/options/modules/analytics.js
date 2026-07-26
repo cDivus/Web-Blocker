@@ -11,8 +11,20 @@ export async function renderAnalytics() {
   const timerData  = await sendMsg('getTimers') || {};
   const siteTimers = timerData.siteTimers || {};
 
-  const activeModeId = freshState.activeModeId || null;
-  const activeMode = (freshState.modes || []).find(m => m.id === activeModeId);
+  const getActiveMode = (s) => {
+    if (s.enabled === false) return null;
+    const modesList = s.modes || [];
+    if (s.scheduleEnabled) {
+      const globalSchedule = s.globalSchedule || {};
+      const now = new Date();
+      const key = `${now.getDay()}-${now.getHours()}`;
+      const scheduledModeId = globalSchedule[key];
+      return modesList.find(m => m.id === scheduledModeId) || null;
+    }
+    return modesList.find(m => m.id === s.activeModeId) || null;
+  };
+
+  const activeMode = getActiveMode(freshState);
 
   // Only show entries that have a limitMinutes
   const timedEntries = activeMode
@@ -23,7 +35,9 @@ export async function renderAnalytics() {
     container.textContent = '';
     const p = document.createElement('p');
     p.className = 'analytics-empty';
-    p.textContent = 'No active mode selected. Activate a mode from the Block List tab to see timer data.';
+    p.textContent = freshState.scheduleEnabled
+      ? 'No mode is currently scheduled for this hour.'
+      : 'No active mode selected. Activate a mode from the Block List tab to see timer data.';
     container.appendChild(p);
     return;
   }
