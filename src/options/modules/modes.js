@@ -74,7 +74,21 @@ export function renderModes() {
   }
 }
 
+export function saveActiveBlocklists() {
+  if (store.selectedModeId) {
+    const modeEditor = document.getElementById('mode-editor');
+    if (modeEditor && modeEditor.style.display !== 'none') {
+      saveModeDomainsFromTextarea();
+    }
+  }
+  const perpetualEditor = document.getElementById('perpetual-editor');
+  if (perpetualEditor && perpetualEditor.style.display !== 'none') {
+    savePerpetualBlockFromTextarea();
+  }
+}
+
 export function handlePencilClick(modeId) {
+  saveActiveBlocklists();
   const perpetualEditor = document.getElementById('perpetual-editor');
   if (perpetualEditor) perpetualEditor.style.display = 'none';
 
@@ -321,6 +335,14 @@ export function setupModesListeners() {
     });
   }
 
+  // Auto-save open blocklists when losing tab focus or window focus
+  window.addEventListener('blur', saveActiveBlocklists);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      saveActiveBlocklists();
+    }
+  });
+
   // ---- PERPETUAL BLOCK LISTENERS ----
   const perpetualCard = document.getElementById('perpetual-card');
   if (perpetualCard) {
@@ -405,6 +427,7 @@ export function setupModesListeners() {
 }
 
 export function openPerpetualEditor() {
+  saveActiveBlocklists();
   const modeEditor = document.getElementById('mode-editor');
   if (modeEditor) modeEditor.style.display = 'none';
   store.selectedModeId = null;

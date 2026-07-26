@@ -1,7 +1,7 @@
 // ===== MAIN OPTIONS CONTROLLER & ROUTER =====
 import { store, refreshState } from './modules/state.js';
 import { sendMsg } from './modules/utils.js';
-import { renderModes, setupModesListeners } from './modules/modes.js';
+import { renderModes, setupModesListeners, saveActiveBlocklists } from './modules/modes.js';
 import { renderSchedule, setupScheduleListeners } from './modules/schedule.js';
 import { renderBlockPage, setupBlockPageListeners } from './modules/blockpage.js';
 import { renderAnalytics } from './modules/analytics.js';
@@ -90,7 +90,8 @@ function setupNav() {
         store.analyticsInterval = setInterval(renderAnalytics, 1000);
       }
 
-      // Close the open mode editor when switching sections
+      // Close the open mode editor when switching sections (save changes first)
+      saveActiveBlocklists();
       store.selectedModeId = null;
       const editor = document.getElementById('mode-editor');
       if (editor) editor.style.display = 'none';
