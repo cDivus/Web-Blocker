@@ -36,23 +36,6 @@ h1 {
   letter-spacing: -0.2px;
 }
 
-/* ===== SUBTITLE ===== */
-.subtitle {
-  font-size: 0.82rem;
-  color: var(--text-secondary);
-  text-align: center;
-  word-break: break-all;
-  padding: 10px 18px;
-  background: var(--bg-card);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
-}
-
-@media (prefers-color-scheme: dark) {
-  .subtitle {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  }
-}
 
 /* ===== FOOTER ===== */
 .footer {

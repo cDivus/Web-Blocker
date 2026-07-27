@@ -256,20 +256,14 @@
         <!-- Perpetual Block Access Settings -->
         <div class="danger-card" style="margin-bottom: 16px;">
           <div class="danger-card-body" style="flex-grow: 1;">
-            <div class="danger-item-title">PERPETUAL BLOCK (24/7)</div>
-            <div class="danger-item-desc" id="perpetual-status-desc">Locked and hidden away for this session. Enter your password to reveal and edit perpetual blocks.</div>
-
-            <div id="perpetual-unlock-container" style="margin-top: 12px;">
-              <div style="display: flex; gap: 8px; align-items: center;">
-                <input type="password" id="perpetual-password-input" class="lock-input card-input"/>
-                <button class="btn btn-sm" id="btn-unlock-perpetual">Unlock</button>
-              </div>
-              <div class="textarea-error" id="perpetual-unlock-error" style="display: none; margin-top: 6px;"></div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <div class="danger-item-title" style="margin: 0;">PERPETUAL BLOCK (24/7)</div>
+              <label class="switch" style="margin: 0; flex-shrink: 0;">
+                <input type="checkbox" id="perpetual-enabled-danger" />
+                <span class="slider"></span>
+              </label>
             </div>
-
-            <div id="perpetual-unlocked-badge" style="margin-top: 10px; display: none; font-weight: 700; color: var(--accent-color); font-size: 0.8rem; text-transform: uppercase;">
-              ✓ Unlocked for this session
-            </div>
+            <div class="danger-item-desc" id="perpetual-status-desc">Show or hide the Perpetual Block (24/7) list on the Block List page.</div>
           </div>
         </div>
 

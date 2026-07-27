@@ -17,18 +17,6 @@ const params = new URLSearchParams(window.location.search);
 const blockedUrl = params.get('blocked') || '';
 const blockedDomain = blockedUrl ? parseUrl(blockedUrl)?.hostname || blockedUrl : '';
 
-// Show the blocked URL
-if (blockedUrl) {
-  try {
-    const parsed = new URL(blockedUrl);
-    document.getElementById('blocked-url').textContent = parsed.hostname + parsed.pathname.slice(0, 40) + (parsed.pathname.length > 40 ? '…' : '');
-  } catch {
-    document.getElementById('blocked-url').textContent = blockedUrl.slice(0, 60);
-  }
-} else {
-  document.getElementById('blocked-url').style.display = 'none';
-}
-
 // Load custom block page message or custom ZIP/HTML template
 chrome.storage.local.get(['blockPageContent', 'blockPageType', 'customBlockHtml', 'customBlockAssets', 'blockPageUseQuotes', 'blockPageQuotes'], (data) => {
   document.title = `Blocked — ${blockedDomain || 'Web Blocker'}`;

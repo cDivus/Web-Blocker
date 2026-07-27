@@ -3,9 +3,6 @@ import { store } from './state.js';
 import { sendMsg, serializeEntries, parseLine } from '../../common/utils.js';
 
 export function renderBlocklist() {
-  const hasPassword = !!store.state.password;
-  const isUnlocked = !hasPassword || store.perpetualUnlocked === true;
-
   // 1. Scheduled Blocklist
   const textarea = document.getElementById('blocklist-textarea');
   if (textarea) {
@@ -16,33 +13,14 @@ export function renderBlocklist() {
     updateBlocklistStats(text, 'textarea-error', 'blocklist-stats');
   }
 
-  // 2. Perpetual Blocklist (24/7) Section Visibility (Hidden away until unlocked)
+  // 2. Perpetual Blocklist (24/7) Checkbox & Section Visibility
+  const isPerpetualEnabled = store.state.perpetualEnabled === true;
+  const cbDanger = document.getElementById('perpetual-enabled-danger');
+  if (cbDanger) cbDanger.checked = isPerpetualEnabled;
+
   const perpetualContainer = document.getElementById('perpetual-section-container');
   if (perpetualContainer) {
-    perpetualContainer.style.display = isUnlocked ? 'block' : 'none';
-  }
-
-  // 3. Perpetual Settings Card in Other Settings
-  const statusDesc = document.getElementById('perpetual-status-desc');
-  const unlockContainer = document.getElementById('perpetual-unlock-container');
-  const unlockedBadge = document.getElementById('perpetual-unlocked-badge');
-
-  if (statusDesc && unlockContainer && unlockedBadge) {
-    if (hasPassword) {
-      if (isUnlocked) {
-        statusDesc.textContent = 'Unlocked and visible on the Block List page.';
-        unlockContainer.style.display = 'none';
-        unlockedBadge.style.display = 'block';
-      } else {
-        statusDesc.textContent = 'Locked and hidden away for this session. Enter your password to reveal and edit perpetual blocks.';
-        unlockContainer.style.display = 'block';
-        unlockedBadge.style.display = 'none';
-      }
-    } else {
-      statusDesc.textContent = 'Visible and active 24/7 on the Block List page.';
-      unlockContainer.style.display = 'none';
-      unlockedBadge.style.display = 'none';
-    }
+    perpetualContainer.style.display = isPerpetualEnabled ? 'block' : 'none';
   }
 
   const perpetualTextarea = document.getElementById('perpetual-textarea');
@@ -130,11 +108,9 @@ export async function saveBlocklistFromTextarea() {
     }
   }
 
-  const hasPassword = !!store.state.password;
-  const isUnlocked = !hasPassword || store.perpetualUnlocked === true;
   const perpetualTextarea = document.getElementById('perpetual-textarea');
 
-  if (isUnlocked && perpetualTextarea) {
+  if (perpetualTextarea) {
     const rawPerpetualText = perpetualTextarea.value;
     if (rawPerpetualText !== store.originalPerpetualText) {
       const perpetualEntries = parseTextareaEntries(rawPerpetualText);
@@ -168,33 +144,21 @@ export function initBlocklistEvents() {
     });
   }
 
-  // Password Unlock Handler for Perpetual Block Access
-  const unlockBtn = document.getElementById('btn-unlock-perpetual');
-  const pwdInput = document.getElementById('perpetual-password-input');
-  const errorEl = document.getElementById('perpetual-unlock-error');
+  // Toggle Perpetual Block Enabled state
+  const handlePerpetualToggle = async (e) => {
+    const enabled = e.target.checked;
+    store.state.perpetualEnabled = enabled;
+    const cbDanger = document.getElementById('perpetual-enabled-danger');
+    if (cbDanger) cbDanger.checked = enabled;
 
-  const attemptUnlock = () => {
-    if (!pwdInput) return;
-    const entered = pwdInput.value.trim();
-    if (entered === store.state.password) {
-      store.perpetualUnlocked = true;
-      if (errorEl) errorEl.style.display = 'none';
-      pwdInput.value = '';
-      renderBlocklist();
-    } else {
-      if (errorEl) {
-        errorEl.textContent = 'Incorrect password.';
-        errorEl.style.display = 'block';
-      }
+    const perpetualContainer = document.getElementById('perpetual-section-container');
+    if (perpetualContainer) {
+      perpetualContainer.style.display = enabled ? 'block' : 'none';
     }
+
+    await sendMsg('savePerpetualEnabled', { enabled });
   };
 
-  if (unlockBtn) {
-    unlockBtn.addEventListener('click', attemptUnlock);
-  }
-  if (pwdInput) {
-    pwdInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') attemptUnlock();
-    });
-  }
+  const cbDanger = document.getElementById('perpetual-enabled-danger');
+  if (cbDanger) cbDanger.addEventListener('change', handlePerpetualToggle);
 }

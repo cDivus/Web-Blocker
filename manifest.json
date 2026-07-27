@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Web Blocker & Timer",
-  "version": "2.2.0",
-  "description": "The simplest Web Blocker & Timer. Customizable block modes,  daily time limits,  schedules, and block screens.",
+  "version": "2.3.0",
+  "description": "The simplest Web Blocker & Timer. Daily time limits,  schedules, and block screens.",
   "permissions": [
     "storage",
     "alarms",

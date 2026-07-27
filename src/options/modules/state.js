@@ -14,8 +14,7 @@ export const store = {
   tempCustomAssets: null,
   tempCustomName: null,
   currentBlockPageType: 'default',
-  analyticsInterval: null,
-  perpetualUnlocked: false
+  analyticsInterval: null
 };
 
 export async function refreshState() {

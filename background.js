@@ -57,7 +57,7 @@ function isScheduleActive(schedule) {
 // ===== BLOCKING LOGIC =====
 async function shouldBlock(url) {
   const data = await get([
-    'enabled', 'blocklist', 'perpetualBlock', 'tempUnblocks', 'schedule'
+    'enabled', 'blocklist', 'perpetualBlock', 'perpetualEnabled', 'tempUnblocks', 'schedule'
   ]);
 
   if (data.enabled === false) return false;
@@ -72,9 +72,10 @@ async function shouldBlock(url) {
     return false;
   }
 
-  // 1. CHECK PERPETUAL BLOCK (24/7 - Bypasses Schedule Always)
+  // 1. CHECK PERPETUAL BLOCK (24/7 - Bypasses Schedule Always when enabled)
+  const perpetualEnabled = data.perpetualEnabled === true;
   const perpetualBlock = data.perpetualBlock || [];
-  if (perpetualBlock.length > 0) {
+  if (perpetualEnabled && perpetualBlock.length > 0) {
     const hasPerpetualAllowlist = perpetualBlock.some(e => {
       const d = (typeof e === 'string') ? e : e.domain;
       if (!d || !d.startsWith('!')) return false;
@@ -326,7 +327,7 @@ async function handle(msg) {
 
   if (action === 'getState') {
     const data = await get([
-      'enabled', 'blocklist', 'perpetualBlock', 'schedule', 'tempUnblocks',
+      'enabled', 'blocklist', 'perpetualBlock', 'perpetualEnabled', 'schedule', 'tempUnblocks',
       'blockPageContent', 'password', 'blockPageType',
       'customBlockHtml', 'customBlockAssets', 'customBlockName',
       'blockPageUseQuotes', 'blockPageQuotes'
@@ -336,6 +337,7 @@ async function handle(msg) {
       enabled: data.enabled !== false,
       blocklist: data.blocklist || [],
       perpetualBlock: data.perpetualBlock || [],
+      perpetualEnabled: data.perpetualEnabled === true,
       schedule: data.schedule || { enabled: false, start: '09:00', end: '17:00', days: 'weekdays' }
     };
 
@@ -372,6 +374,13 @@ async function handle(msg) {
     await updateTracker();
     await checkAndRedirectBlockedTabs();
     return { ok: true, perpetualBlock };
+
+  } else if (action === 'savePerpetualEnabled') {
+    const perpetualEnabled = !!msg.enabled;
+    await set({ perpetualEnabled });
+    await updateTracker();
+    await checkAndRedirectBlockedTabs();
+    return { ok: true, perpetualEnabled };
 
   } else if (action === 'setSchedule') {
     await set({ schedule: msg.schedule });
@@ -435,6 +444,7 @@ chrome.runtime.onInstalled.addListener(async () => {
       enabled: true,
       blocklist: [],
       perpetualBlock: [],
+      perpetualEnabled: false,
       schedule: { enabled: false, start: '09:00', end: '17:00', days: 'weekdays' },
       tempUnblocks: {},
       siteTimers: {}

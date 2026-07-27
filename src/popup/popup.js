@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const state = await sendMsg('getState');
   const countEl = document.getElementById('blocked-count');
   const blocklist = state.blocklist || [];
-  const perpetualBlock = state.perpetualBlock || [];
+  const perpetualBlock = (state.perpetualEnabled === true) ? (state.perpetualBlock || []) : [];
   const combined = [...perpetualBlock, ...blocklist];
 
   updateCount(countEl, combined);
@@ -129,7 +129,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Open settings
   const passwordContainer = document.getElementById('popup-password-container');
-  const openSettingsBtn = document.getElementById('btn-open-settings');
+  const openSettingsBtn = document.getElementById('btn-settings');
   const popupPasswordInput = document.getElementById('popup-password-input');
 
   if (state.password) {
@@ -138,17 +138,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (passwordContainer) passwordContainer.style.display = 'none';
   }
 
-  openSettingsBtn.addEventListener('click', async () => {
-    if (state.password) {
-      const pwd = popupPasswordInput ? popupPasswordInput.value.trim() : '';
-      if (pwd !== state.password) {
-        alert('Incorrect password');
-        return;
+  if (openSettingsBtn) {
+    openSettingsBtn.addEventListener('click', async () => {
+      if (state.password) {
+        const pwd = popupPasswordInput ? popupPasswordInput.value.trim() : '';
+        if (pwd !== state.password) {
+          alert('Incorrect password');
+          return;
+        }
+        await chrome.storage.local.set({ sessionUnlocked: true });
       }
-      await chrome.storage.local.set({ sessionUnlocked: true });
-    }
-    chrome.runtime.openOptionsPage();
-  });
+      chrome.runtime.openOptionsPage();
+    });
+  }
 });
 
 function updateCount(el, blocklist) {
