@@ -72,10 +72,9 @@ async function shouldBlock(url) {
     return false;
   }
 
-  // 1. CHECK PERPETUAL BLOCK (24/7 - Bypasses Schedule Always when enabled)
-  const perpetualEnabled = data.perpetualEnabled === true;
+  // 1. CHECK PERPETUAL BLOCK (24/7 - Bypasses Schedule Always)
   const perpetualBlock = data.perpetualBlock || [];
-  if (perpetualEnabled && perpetualBlock.length > 0) {
+  if (perpetualBlock.length > 0) {
     const hasPerpetualAllowlist = perpetualBlock.some(e => {
       const d = (typeof e === 'string') ? e : e.domain;
       if (!d || !d.startsWith('!')) return false;

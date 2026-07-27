@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const state = await sendMsg('getState');
   const countEl = document.getElementById('blocked-count');
   const blocklist = state.blocklist || [];
-  const perpetualBlock = (state.perpetualEnabled === true) ? (state.perpetualBlock || []) : [];
+  const perpetualBlock = state.perpetualBlock || [];
   const combined = [...perpetualBlock, ...blocklist];
 
   updateCount(countEl, combined);
@@ -131,6 +131,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const passwordContainer = document.getElementById('popup-password-container');
   const openSettingsBtn = document.getElementById('btn-settings');
   const popupPasswordInput = document.getElementById('popup-password-input');
+  const popupPasswordError = document.getElementById('popup-password-error');
 
   if (state.password) {
     if (passwordContainer) passwordContainer.style.display = 'block';
@@ -138,17 +139,51 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (passwordContainer) passwordContainer.style.display = 'none';
   }
 
-  if (openSettingsBtn) {
-    openSettingsBtn.addEventListener('click', async () => {
-      if (state.password) {
-        const pwd = popupPasswordInput ? popupPasswordInput.value.trim() : '';
-        if (pwd !== state.password) {
-          alert('Incorrect password');
-          return;
+  const handleOpenSettings = async () => {
+    if (popupPasswordError) {
+      popupPasswordError.style.display = 'none';
+      popupPasswordError.textContent = '';
+    }
+    if (state.password) {
+      const pwd = popupPasswordInput ? popupPasswordInput.value.trim() : '';
+      if (!pwd) {
+        if (popupPasswordError) {
+          popupPasswordError.textContent = 'Password required';
+          popupPasswordError.style.display = 'block';
         }
-        await chrome.storage.local.set({ sessionUnlocked: true });
+        if (popupPasswordInput) popupPasswordInput.focus();
+        return;
       }
-      chrome.runtime.openOptionsPage();
+      if (pwd !== state.password) {
+        if (popupPasswordError) {
+          popupPasswordError.textContent = 'Incorrect password';
+          popupPasswordError.style.display = 'block';
+        }
+        if (popupPasswordInput) {
+          popupPasswordInput.value = '';
+          popupPasswordInput.focus();
+        }
+        return;
+      }
+      await chrome.storage.local.set({ sessionUnlocked: true });
+    }
+    chrome.runtime.openOptionsPage();
+  };
+
+  if (openSettingsBtn) {
+    openSettingsBtn.addEventListener('click', handleOpenSettings);
+  }
+
+  if (popupPasswordInput) {
+    popupPasswordInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        handleOpenSettings();
+      }
+    });
+    popupPasswordInput.addEventListener('input', () => {
+      if (popupPasswordError) {
+        popupPasswordError.style.display = 'none';
+      }
     });
   }
 });
