@@ -1,6 +1,6 @@
 {
   "name": "web-blocker",
-  "version": "2.0.0",
+  "version": "2.5.0",
   "description": "The simplest Web Blocker & Timer. Customizable block modes, daily time limits, schedules, and block screens.",
   "type": "module",
   "private": true,
