@@ -1,4 +1,4 @@
-import { getLocalDateString, getActiveMode, parseUrl, findMatchingEntry } from '../common/utils.js';
+import { getLocalDateString, parseUrl, findMatchingEntry, entryMatches } from '../common/utils.js';
 
 // Apply theme immediately on script load
 chrome.storage.local.get('theme', (data) => {
@@ -24,10 +24,11 @@ function sendMsg(action, data = {}) {
 document.addEventListener('DOMContentLoaded', async () => {
   const state = await sendMsg('getState');
   const countEl = document.getElementById('blocked-count');
+  const blocklist = state.blocklist || [];
+  const perpetualBlock = state.perpetualBlock || [];
+  const combined = [...perpetualBlock, ...blocklist];
 
-
-  const activeMode = getActiveMode(state);
-  updateCount(countEl, activeMode);
+  updateCount(countEl, combined);
 
   // Check tab block & match status
   const currentTabRes = await sendMsg('getCurrentTab');
@@ -36,11 +37,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   let alreadyBlocked = false;
 
   if (currentTabRes?.url && parseUrl(currentTabRes.url)) {
+    const urlObj = parseUrl(currentTabRes.url);
     isBlockable = true;
-    if (activeMode) {
-      matchedEntry = findMatchingEntry(currentTabRes.url, activeMode.domains);
-      alreadyBlocked = !!matchedEntry;
-    }
+    matchedEntry = findMatchingEntry(urlObj, combined);
+
+    // Check if site matches ANY rule entry in combined list (including whitelisted ! rules)
+    const hasAnyMatch = combined.some(e => {
+      const d = (typeof e === 'string') ? e : e.domain;
+      if (!d) return false;
+      const cleanD = d.startsWith('!') ? d.slice(1).trim() : d;
+      return entryMatches(urlObj, cleanD);
+    });
+
+    alreadyBlocked = !!matchedEntry || hasAnyMatch;
   }
 
   // Live active tab timer countdown in Popup
@@ -91,7 +100,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const btnBlockCurrent = document.getElementById('btn-block-current');
   const updateBlockCurrentButton = () => {
-    btnBlockCurrent.disabled = !isBlockable || !activeMode || alreadyBlocked;
+    btnBlockCurrent.disabled = !isBlockable || alreadyBlocked;
     btnBlockCurrent.textContent = alreadyBlocked ? 'Already Blocked' : 'Block This Site';
   };
 
@@ -99,65 +108,56 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Block current site
   btnBlockCurrent.addEventListener('click', async () => {
-    const res = await sendMsg('getCurrentTab');
-    if (!res?.url) return;
+    if (!isBlockable || alreadyBlocked) return;
+    const tabRes = await sendMsg('getCurrentTab');
+    if (!tabRes?.url) return;
 
-    const urlObj = parseUrl(res.url);
-    if (!urlObj?.hostname) return;
+    const urlObj = parseUrl(tabRes.url);
+    if (!urlObj) return;
 
-    const addRes = await sendMsg('addDomain', { domain: urlObj.hostname });
+    const domainToAdd = urlObj.hostname;
+    const addRes = await sendMsg('addDomain', { domain: domainToAdd });
+
     if (addRes?.ok) {
-      updateCount(countEl, addRes.mode);
       alreadyBlocked = true;
       updateBlockCurrentButton();
-    } else {
-      countEl.textContent = 'Enable a mode in Settings first';
+      state.blocklist = addRes.blocklist || [];
+      const updatedCombined = [...(state.perpetualBlock || []), ...state.blocklist];
+      updateCount(countEl, updatedCombined);
     }
   });
-
-  // Check password status on load
-  const pwdContainer = document.getElementById('popup-password-container');
-  const pwdInput = document.getElementById('popup-password-input');
-  const pwdError = document.getElementById('popup-password-error');
-
-  pwdContainer.style.display = state.password ? 'block' : 'none';
 
   // Open settings
-  document.getElementById('btn-settings').addEventListener('click', async () => {
+  const passwordContainer = document.getElementById('popup-password-container');
+  const openSettingsBtn = document.getElementById('btn-open-settings');
+  const popupPasswordInput = document.getElementById('popup-password-input');
+
+  if (state.password) {
+    if (passwordContainer) passwordContainer.style.display = 'block';
+  } else {
+    if (passwordContainer) passwordContainer.style.display = 'none';
+  }
+
+  openSettingsBtn.addEventListener('click', async () => {
     if (state.password) {
-      const enteredVal = pwdInput.value.trim();
-      if (enteredVal !== state.password) {
-        pwdError.textContent = 'Incorrect password.';
-        pwdError.style.display = 'block';
+      const pwd = popupPasswordInput ? popupPasswordInput.value.trim() : '';
+      if (pwd !== state.password) {
+        alert('Incorrect password');
         return;
       }
-      pwdError.style.display = 'none';
-      
-      // Set a temporary session unlock key so options page lets us in automatically
       await chrome.storage.local.set({ sessionUnlocked: true });
     }
-
-      chrome.tabs.create({ url: chrome.runtime.getURL('src/options/options.html') });
-  });
-
-  // Enable unlock on pressing Enter in the password field
-  pwdInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      document.getElementById('btn-settings').click();
-    }
+    chrome.runtime.openOptionsPage();
   });
 });
 
-function updateCount(el, mode) {
-  if (!mode) {
-    el.textContent = 'No mode active';
-    return;
-  }
-  let n = 0;
-  (mode.domains || []).forEach(e => {
-    if (e && e.domain) {
-      n += e.domain.split(',').filter(Boolean).length;
-    }
-  });
-  el.textContent = `${mode.name}: ${n} site${n !== 1 ? 's' : ''}`;
+function updateCount(el, blocklist) {
+  if (!el) return;
+  const count = blocklist.reduce((acc, entry) => {
+    const raw = typeof entry === 'string' ? entry : entry.domain;
+    if (!raw || raw.startsWith('!')) return acc;
+    const subCount = raw.split(',').filter(Boolean).length;
+    return acc + subCount;
+  }, 0);
+  el.textContent = `${count} site${count !== 1 ? 's' : ''} blocked`;
 }

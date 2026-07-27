@@ -45,100 +45,36 @@
 
       <!-- ===== BLOCK LIST ===== -->
       <section class="section active" id="section-blocklist">
-        <h2 class="section-title">Block List</h2>
-        <p class="section-desc">Create and edit your modes.</p>
-
-        <div class="schedule-warning-banner" id="schedule-warning-banner" style="display:none;">
-          Automated Scheduling is active. Manual mode activation is disabled.
-        </div>
-        <br>
-        <!-- Modes header -->
-        <div class="modes-header">
-          <span class="field-label" style="margin:0; border:none;">Modes</span>
-          <button class="btn btn-sm" id="btn-new-mode">New Mode</button>
+        <!-- Scheduled Block List -->
+        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+          <div>
+            <h2 class="section-title">Scheduled Block List</h2>
+            <p class="section-desc">Active during scheduled hours (or whenever active if schedule is disabled).</p>
+          </div>
+          <div class="field-label" id="blocklist-stats" style="margin: 0; font-size: 0.85rem; opacity: 0.8;">0 sites</div>
         </div>
 
-        <!-- Mode cards -->
-        <div class="modes-grid" id="modes-grid"></div>
-
-        <!-- New mode inline form -->
-        <div class="new-mode-form" id="new-mode-form" style="display:none;">
-          <input type="text" id="new-mode-name" placeholder="Mode name (e.g. Study, Work)" />
-          <button class="btn btn-sm" id="btn-create-mode">Create</button>
-          <button class="btn btn-sm" id="btn-cancel-mode">Cancel</button>
+        <div class="mode-editor" style="display: block; margin-top: 12px; margin-bottom: 28px;">
+          <textarea id="blocklist-textarea" rows="10"
+            placeholder="youtube.com&#10;facebook.com/feed&#10;!mail.google.com&#10;reddit.com; 30&#10;# comment line"></textarea>
+          <div class="textarea-error" id="textarea-error" style="display:none; margin-top: 8px;"></div>
         </div>
 
-        <!-- Mode editor -->
-        <div class="mode-editor" id="mode-editor" style="display:none;">
-          <div class="mode-editor-header">
-            <div class="mode-editor-title-container">
-              <span class="mode-editor-name" id="mode-editor-name" title="Double-click to rename"></span>
-              <input type="text" id="mode-editor-name-input" class="mode-editor-name-input" style="display:none;" />
+        <!-- Perpetual Block Section (24/7) -->
+        <div id="perpetual-section-container" style="display: none; margin-top: 32px;">
+          <div style="display: flex; justify-content: space-between; align-items: baseline;">
+            <div>
+              <h2 class="section-title">Perpetual Block (24/7)</h2>
+              <p class="section-desc">Always blocked 24/7 — bypasses schedule limits entirely.</p>
             </div>
-            <div class="mode-editor-btns">
-              <button class="btn btn-sm" id="btn-activate-mode">Activate</button>
-              <button class="btn btn-sm btn-danger" id="btn-delete-mode">Delete</button>
-            </div>
-          </div>
-
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-top:0;">
-            <div class="field-label" style="margin-top:0;">Blocked Sites</div>
-          </div>
-          <textarea id="mode-domains-textarea" rows="12"
-            placeholder="youtube.com/shorts&#10;facebook.com; 30&#10;reddit.com"></textarea>
-          <div class="textarea-error" id="textarea-error" style="display:none;"></div>
-        </div>
-
-        <!-- Section Divider & Perpetual Block Container -->
-        <div id="perpetual-section-container">
-          <div class="section-divider"></div>
-
-          <!-- Perpetual Block Header -->
-          <div class="modes-header" style="margin-top: 10px;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <span class="field-label" style="margin:0; border:none;">Perpetual Block</span>
-            </div>
-          </div>
-          <p class="section-desc" style="margin-top: 4px; margin-bottom: 14px;">
-            Permanent blocks, remember why you blocked them.
-          </p>
-
-          <!-- Perpetual Block Card -->
-          <div class="modes-grid" id="perpetual-grid">
-            <div class="mode-card" id="perpetual-card">
-              <div class="mode-card-header">
-                <div class="mode-card-name">Perpetual</div>
-              </div>
-              <div class="mode-card-count" id="perpetual-card-count">0 sites</div>
-            </div>
-          </div>
-
-          <!-- Inline Password Challenge for Perpetual Block -->
-          <div id="perpetual-auth-container" style="display: none; margin-top: 12px; margin-bottom: 16px;">
-            <div style="display: flex; gap: 8px; align-items: center; max-width: 360px;">
-              <input type="password" id="perpetual-auth-password-input" class="mode-editor-name-input" placeholder="Password to unlock" style="flex: 1; padding: 7px 12px; margin: 0; display: block;" />
-              <button class="btn btn-sm" id="btn-perpetual-auth-submit">Unlock</button>
-            </div>
-            <div class="textarea-error" id="perpetual-auth-error" style="display: none; margin-top: 6px;"></div>
+            <div class="field-label" id="perpetual-stats" style="margin: 0; font-size: 0.85rem; opacity: 0.8;">0 sites</div>
           </div>
 
           <!-- Perpetual Block Editor -->
-          <div class="mode-editor" id="perpetual-editor" style="display:none;">
-            <div class="mode-editor-header">
-              <div class="mode-editor-title-container">
-                <span class="mode-editor-name">Perpetual Blocked Sites</span>
-              </div>
-              <div class="mode-editor-btns">
-                <button class="btn btn-sm" id="btn-save-perpetual">Save Changes</button>
-              </div>
-            </div>
-
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top:0;">
-              <div class="field-label" style="margin-top:0;">Always Blocked Sites</div>
-            </div>
-            <textarea id="perpetual-domains-textarea" rows="10"
-              placeholder="youtube.com/shorts&#10;facebook.com; 30&#10;reddit.com"></textarea>
-            <div class="textarea-error" id="perpetual-textarea-error" style="display:none;"></div>
+          <div class="mode-editor" id="perpetual-editor" style="display: block; margin-top: 12px;">
+            <textarea id="perpetual-textarea" rows="10"
+              placeholder="twitter.com&#10;instagram.com&#10;tiktok.com"></textarea>
+            <div class="textarea-error" id="perpetual-textarea-error" style="display:none; margin-top: 8px;"></div>
           </div>
         </div>
       </section>
@@ -154,42 +90,27 @@
           </label>
         </h2>
         <p class="section-desc">
-          Schedule your modes.
+          Automatically activate your blocklist during specific hours of the day.
         </p>
 
-        <!-- The contents wrapped to blur/hide when not enabled -->
-        <div id="schedule-content-wrapper" class="schedule-content-wrapper">
-          <div class="field-row" style="margin-bottom: 20px;">
-            <span class="field-label" style="margin:0;">Configure Mode:</span>
-            <select id="schedule-mode-select" class="schedule-mode-select"></select>
-          </div>
-
-          <div id="schedule-config-container">
-            <div class="field-label" style="margin-bottom: 6px;">Active Hours</div>
-            <p class="section-desc" style="margin-bottom: 12px; font-size: 0.8rem; line-height: 1.3;">
-              Click and drag to paint active block times on the calendar map grid.
-            </p>
-
-            <div class="calendar-map-container">
-              <div class="calendar-map-grid" id="calendar-map-grid"></div>
-              <div class="calendar-map-legend"
-                style="margin-top: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-                <div style="display: flex; gap: 8px;">
-                  <button class="btn" id="btn-calendar-clear" style="padding: 6px 12px; font-size: 0.75rem;">Clear
-                    All</button>
-                  <button class="btn" id="btn-calendar-weekdays" style="padding: 6px 12px; font-size: 0.75rem;">Weekdays
-                    (9-5)</button>
-                </div>
-                <div id="calendar-modes-legend" style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
-                </div>
-              </div>
+        <div id="schedule-content-wrapper" class="schedule-content-wrapper" style="margin-top: 20px;">
+          <div class="field-row" style="margin-bottom: 16px;">
+            <span class="field-label" style="min-width: 110px;">Active Hours:</span>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <input type="time" id="schedule-start-time" class="mode-editor-name-input" style="width: auto; padding: 6px 12px;" value="09:00" />
+              <span>to</span>
+              <input type="time" id="schedule-end-time" class="mode-editor-name-input" style="width: auto; padding: 6px 12px;" value="17:00" />
             </div>
           </div>
-        </div>
 
-        <div id="schedule-no-modes"
-          style="display: none; padding: 20px; border: 1.5px dashed #000000; text-align: center; font-weight: 700; text-transform: uppercase;">
-          Create a mode in the Block List first to configure its schedule.
+          <div class="field-row">
+            <span class="field-label" style="min-width: 110px;">Active Days:</span>
+            <select id="schedule-days-select" class="schedule-mode-select" style="width: auto; padding: 6px 12px;">
+              <option value="weekdays">Weekdays (Mon – Fri)</option>
+              <option value="everyday">Every Day</option>
+              <option value="weekends">Weekends Only</option>
+            </select>
+          </div>
         </div>
       </section>
 
@@ -292,7 +213,7 @@
                 </tr>
                 <tr>
                   <td><code>gaming</code></td>
-                  <td><strong>Keyword Block</strong>: Blocks any URL containing the word "gaming".</td>
+                  <td><strong>Keyword Block</strong>: Blocks any URL containing the word "gaming". Works with search URLs.</td>
                 </tr>
                 <tr>
                   <td><code>!music.youtube.com</code></td>
@@ -332,16 +253,24 @@
           </div>
         </div>
 
-        <!-- Perpetual Block Toggle -->
+        <!-- Perpetual Block Access Settings -->
         <div class="danger-card" style="margin-bottom: 16px;">
-          <div class="danger-card-body" style="flex-grow: 1; margin-right: 16px;">
-            <div class="danger-item-title">PERPETUAL BLOCK SECTION</div>
-            <div class="danger-item-desc">Show or hide the Perpetual Block section on the Block List page.</div>
+          <div class="danger-card-body" style="flex-grow: 1;">
+            <div class="danger-item-title">PERPETUAL BLOCK (24/7)</div>
+            <div class="danger-item-desc" id="perpetual-status-desc">Locked and hidden away for this session. Enter your password to reveal and edit perpetual blocks.</div>
+
+            <div id="perpetual-unlock-container" style="margin-top: 12px;">
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <input type="password" id="perpetual-password-input" class="lock-input card-input"/>
+                <button class="btn btn-sm" id="btn-unlock-perpetual">Unlock</button>
+              </div>
+              <div class="textarea-error" id="perpetual-unlock-error" style="display: none; margin-top: 6px;"></div>
+            </div>
+
+            <div id="perpetual-unlocked-badge" style="margin-top: 10px; display: none; font-weight: 700; color: var(--accent-color); font-size: 0.8rem; text-transform: uppercase;">
+              ✓ Unlocked for this session
+            </div>
           </div>
-          <label class="switch" style="margin: 0; flex-shrink: 0;">
-            <input type="checkbox" id="toggle-perpetual-section" />
-            <span class="slider"></span>
-          </label>
         </div>
 
         <!-- Password Settings -->
@@ -351,14 +280,12 @@
             <div class="danger-item-desc" id="password-status-desc">Restrict settings access using a password.</div>
 
             <div id="password-setup-container" style="margin-top: 12px;">
-              <input type="password" id="settings-password-input" class="mode-editor-name-input"
-                style="width: 200px; display: inline-block; padding: 6px 10px; margin-right: 8px;" />
+              <input type="password" id="settings-password-input" class="lock-input card-input" style="margin-right: 8px;" />
               <button class="btn btn-sm" id="btn-save-password">Set Password</button>
             </div>
 
             <div id="password-active-container" style="margin-top: 12px; display: none;">
-              <input type="password" id="settings-password-remove-input" class="mode-editor-name-input"
-                style="width: 200px; display: inline-block; padding: 6px 10px; margin-right: 8px;" />
+              <input type="password" id="settings-password-remove-input" class="lock-input card-input" style="margin-right: 8px;" />
               <button class="btn btn-sm btn-danger" id="btn-remove-password">Remove Password</button>
             </div>
             <div id="password-settings-error"

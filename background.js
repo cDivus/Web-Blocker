@@ -1,11 +1,9 @@
 import {
   getLocalDateString,
-  getActiveMode,
   parseUrl,
   entryMatches,
   findMatchingEntry
 } from './src/common/utils.js';
-
 
 // ===== TIMER HELPERS =====
 const TODAY_KEY = () => getLocalDateString(); // 'YYYY-MM-DD'
@@ -14,7 +12,7 @@ async function getTimerUsage(domain) {
   const data = await get(['siteTimers']);
   const timers = data.siteTimers || {};
   const rec = timers[domain];
-  if (!rec || rec.date !== TODAY_KEY()) return 0; // no usage today
+  if (!rec || rec.date !== TODAY_KEY()) return 0;
   return rec.usedMs || 0;
 }
 
@@ -30,12 +28,36 @@ async function addTimerUsage(domain, ms) {
 
 // ===== STORAGE =====
 const get = keys => chrome.storage.local.get(keys);
-const set = data  => chrome.storage.local.set(data);
+const set = data => chrome.storage.local.set(data);
+
+// ===== SIMPLE SCHEDULE HELPER =====
+function isScheduleActive(schedule) {
+  if (!schedule || !schedule.enabled) return true;
+  const now = new Date();
+  const day = now.getDay(); // 0 = Sun, 6 = Sat
+  const isWeekend = (day === 0 || day === 6);
+  const isWeekday = !isWeekend;
+
+  if (schedule.days === 'weekdays' && isWeekend) return false;
+  if (schedule.days === 'weekends' && isWeekday) return false;
+
+  const currentMins = now.getHours() * 60 + now.getMinutes();
+  const [startH, startM] = (schedule.start || '09:00').split(':').map(Number);
+  const [endH, endM] = (schedule.end || '17:00').split(':').map(Number);
+  const startMins = startH * 60 + startM;
+  const endMins = endH * 60 + endM;
+
+  if (startMins <= endMins) {
+    return currentMins >= startMins && currentMins <= endMins;
+  } else {
+    return currentMins >= startMins || currentMins <= endMins;
+  }
+}
 
 // ===== BLOCKING LOGIC =====
 async function shouldBlock(url) {
   const data = await get([
-    'enabled', 'modes', 'activeModeId', 'globalSchedule', 'tempUnblocks', 'scheduleEnabled', 'perpetualBlock', 'perpetualSectionEnabled'
+    'enabled', 'blocklist', 'perpetualBlock', 'tempUnblocks', 'schedule'
   ]);
 
   if (data.enabled === false) return false;
@@ -50,50 +72,46 @@ async function shouldBlock(url) {
     return false;
   }
 
-  // 1. Check Perpetual Block list first (if section is enabled)
-  const isPerpetualEnabled = data.perpetualSectionEnabled === true;
-  const perpetualDomains = isPerpetualEnabled ? (data.perpetualBlock || []) : [];
-  if (perpetualDomains.length > 0) {
-    const hasPerpetualAllowlist = perpetualDomains.some(e => {
+  // 1. CHECK PERPETUAL BLOCK (24/7 - Bypasses Schedule Always)
+  const perpetualBlock = data.perpetualBlock || [];
+  if (perpetualBlock.length > 0) {
+    const hasPerpetualAllowlist = perpetualBlock.some(e => {
       const d = (typeof e === 'string') ? e : e.domain;
       if (!d || !d.startsWith('!')) return false;
       return entryMatches(urlObj, d);
     });
 
     if (!hasPerpetualAllowlist) {
-      const matchedPerpetual = findMatchingEntry(urlObj, perpetualDomains);
+      const matchedPerpetual = findMatchingEntry(urlObj, perpetualBlock);
       if (matchedPerpetual) {
         const entry = typeof matchedPerpetual === 'string' ? { domain: matchedPerpetual, limitMinutes: null } : matchedPerpetual;
         if (entry.limitMinutes != null) {
           const usedMs = await getTimerUsage(entry.domain);
           if (usedMs >= entry.limitMinutes * 60 * 1000) return true;
         } else {
-          return true;
+          return true; // Permanently blocked 24/7!
         }
       }
     }
   }
 
-  // 2. Next check Active Mode list
-  const activeMode = getActiveMode(data);
-  if (!activeMode || !(activeMode.domains || []).length) return false;
+  // 2. CHECK SCHEDULED BLOCKLIST (Subject to Schedule Window)
+  if (!isScheduleActive(data.schedule)) return false;
 
-  // Check Allowlist (exceptions starting with "!") first
-  const hasAllowlistMatch = (activeMode.domains || []).some(e => {
+  const blocklist = data.blocklist || [];
+  if (!blocklist.length) return false;
+
+  const hasAllowlistMatch = blocklist.some(e => {
     const d = (typeof e === 'string') ? e : e.domain;
     if (!d || !d.startsWith('!')) return false;
     return entryMatches(urlObj, d);
   });
 
-  if (hasAllowlistMatch) {
-    return false; // Match found on allowlist -> ALLOW (do not block)
-  }
+  if (hasAllowlistMatch) return false;
 
-  // Otherwise check Blocklist
-  const matchedEntry = findMatchingEntry(urlObj, activeMode.domains);
+  const matchedEntry = findMatchingEntry(urlObj, blocklist);
   if (!matchedEntry) return false;
 
-  // Timer check: if this entry has a daily limit, check usage
   const entry = typeof matchedEntry === 'string'
     ? { domain: matchedEntry, limitMinutes: null }
     : matchedEntry;
@@ -101,8 +119,8 @@ async function shouldBlock(url) {
   if (entry.limitMinutes != null) {
     const usedMs = await getTimerUsage(entry.domain);
     const limitMs = entry.limitMinutes * 60 * 1000;
-    if (usedMs >= limitMs) return true; // Over limit → block
-    return false; // Under limit → allow
+    if (usedMs >= limitMs) return true;
+    return false;
   }
 
   return true;
@@ -121,13 +139,12 @@ chrome.webNavigation.onBeforeNavigate.addListener(async ({ tabId, frameId, url }
 let lastPopupActiveTime = 0;
 
 // ===== REAL-TIME TIMER TRACKING =====
-// Mutex to serialize all tracker operations and prevent race conditions
-// (e.g. onRemoved + onActivated firing concurrently and double-counting).
 let _trackerLock = Promise.resolve();
 function updateTracker() {
   _trackerLock = _trackerLock.then(() => _updateTrackerImpl()).catch(() => {});
   return _trackerLock;
 }
+
 async function _updateTrackerImpl() {
   const lastWin = await new Promise(resolve => {
     chrome.windows.getLastFocused({ populate: false }, (w) => {
@@ -139,12 +156,10 @@ async function _updateTrackerImpl() {
   let win = lastWin;
   let isBrowserFocused = lastWin && lastWin.focused;
 
-  // Override focus if the popup is currently open and active (heartbeat received within last 2.5 seconds)
   if (Date.now() - lastPopupActiveTime < 2500) {
     isBrowserFocused = true;
   }
 
-  // Ensure win points to a normal browser window if browser is focused (ignores popups)
   if (isBrowserFocused && (!win || win.type !== 'normal')) {
     const normalWin = await new Promise(resolve => {
       chrome.windows.getLastFocused({ windowTypes: ['normal'] }, (w) => {
@@ -164,78 +179,72 @@ async function _updateTrackerImpl() {
     });
   });
 
-  const data = await get(['currentTracker', 'modes', 'activeModeId', 'enabled', 'globalSchedule', 'scheduleEnabled']);
-  
+  const data = await get(['currentTracker', 'blocklist', 'perpetualBlock', 'enabled', 'schedule']);
+
   const tracker = data.currentTracker || null;
   const isEnabled = data.enabled !== false;
-  
+  const isScheduleOn = isScheduleActive(data.schedule);
+
+  const blocklist = isScheduleOn ? (data.blocklist || []) : [];
+  const perpetualBlock = data.perpetualBlock || [];
+  const combinedLists = [...perpetualBlock, ...blocklist];
+
   let activeDomain = null;
   let activeTabId = null;
   let limitMinutes = null;
   let activeTabUrl = null;
-  
+
   if (isEnabled && isBrowserFocused && activeTab && activeTab.url && !/^(chrome|chrome-extension|moz-extension|about|edge):/.test(activeTab.url)) {
     const urlObj = parseUrl(activeTab.url);
     if (urlObj) {
-      const activeMode = getActiveMode(data);
-      if (activeMode) {
-        // First check if domain matches any allowlist entries:
-        const isAllowed = (activeMode.domains || []).some(e => {
-          const d = (typeof e === 'string') ? e : e.domain;
-          if (!d || !d.startsWith('!')) return false;
-          return entryMatches(urlObj, d);
-        });
+      const isAllowed = combinedLists.some(e => {
+        const d = (typeof e === 'string') ? e : e.domain;
+        if (!d || !d.startsWith('!')) return false;
+        return entryMatches(urlObj, d);
+      });
 
-        if (!isAllowed) {
-          const matched = findMatchingEntry(urlObj, activeMode.domains);
-          if (matched) {
-            const entry = typeof matched === 'string' ? { domain: matched, limitMinutes: null } : matched;
-            if (entry.limitMinutes != null) {
-              activeDomain = entry.domain;
-              activeTabId = activeTab.id;
-              limitMinutes = entry.limitMinutes;
-              activeTabUrl = activeTab.url;
-            }
+      if (!isAllowed) {
+        const matched = findMatchingEntry(urlObj, combinedLists);
+        if (matched) {
+          const entry = typeof matched === 'string' ? { domain: matched, limitMinutes: null } : matched;
+          if (entry.limitMinutes != null) {
+            activeDomain = entry.domain;
+            activeTabId = activeTab.id;
+            limitMinutes = entry.limitMinutes;
+            activeTabUrl = activeTab.url;
           }
         }
       }
     }
   }
-  
+
   const now = Date.now();
-  
-  // Case 1: Active tab is still the same tracked tab
+
   if (tracker && tracker.tabId === activeTabId && tracker.domain === activeDomain) {
-    // Check if we exceeded the limit in real-time
     const usedMs = await getTimerUsage(tracker.domain);
     const elapsed = now - tracker.startMs;
     const totalUsedMs = usedMs + elapsed;
     const limitMs = limitMinutes * 60 * 1000;
-    
+
     if (totalUsedMs >= limitMs) {
-      // Exceeded limit! Block immediately
       await recordTrackerExit(tracker);
       chrome.tabs.update(tracker.tabId, { url: chrome.runtime.getURL('src/blocked/blocked.html') + '?blocked=' + encodeURIComponent(activeTabUrl) });
     } else {
-      // Still under limit, update alarm with new remaining time
       const remainingTimeMs = limitMs - totalUsedMs;
       await chrome.alarms.create('block_active_tab', { when: now + remainingTimeMs });
     }
     return;
   }
-  
-  // Case 2: Tracked tab has changed
+
   if (tracker) {
     await recordTrackerExit(tracker);
   }
-  
+
   if (activeDomain) {
-    // Start tracking new tab
     const usedMs = await getTimerUsage(activeDomain);
     const limitMs = limitMinutes * 60 * 1000;
-    
+
     if (usedMs >= limitMs) {
-      // Already over limit, block immediately!
       chrome.tabs.update(activeTabId, { url: chrome.runtime.getURL('src/blocked/blocked.html') + '?blocked=' + encodeURIComponent(activeTabUrl) });
     } else {
       const remainingTimeMs = limitMs - usedMs;
@@ -273,7 +282,6 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   }
 });
 chrome.tabs.onRemoved.addListener((tabId) => {
-  // Serialize through the same lock to prevent race with onActivated
   _trackerLock = _trackerLock.then(async () => {
     const data = await get(['currentTracker']);
     if (data.currentTracker && data.currentTracker.tabId === tabId) {
@@ -317,25 +325,22 @@ async function handle(msg) {
   const { action } = msg;
 
   if (action === 'getState') {
-    const data = await get(['enabled','modes','activeModeId','globalSchedule',
-      'tempUnblocks','blockPageContent','scheduleEnabled','password',
-      'blockPageType','customBlockHtml','customBlockAssets','customBlockName',
-      'blockPageUseQuotes', 'blockPageQuotes', 'perpetualBlock', 'perpetualSectionEnabled']);
+    const data = await get([
+      'enabled', 'blocklist', 'perpetualBlock', 'schedule', 'tempUnblocks',
+      'blockPageContent', 'password', 'blockPageType',
+      'customBlockHtml', 'customBlockAssets', 'customBlockName',
+      'blockPageUseQuotes', 'blockPageQuotes'
+    ]);
     return {
       ...data,
       enabled: data.enabled !== false,
+      blocklist: data.blocklist || [],
       perpetualBlock: data.perpetualBlock || [],
-      perpetualSectionEnabled: data.perpetualSectionEnabled === true
+      schedule: data.schedule || { enabled: false, start: '09:00', end: '17:00', days: 'weekdays' }
     };
 
   } else if (action === 'getTimers') {
     lastPopupActiveTime = Date.now();
-
-    // Read current stored timers and the active tracker from storage.
-    // Do NOT call updateTracker() here — that would persist the elapsed to
-    // siteTimers, and then the block below would add elapsed again on top,
-    // causing double-counting. Instead, we compute the live display value
-    // in memory only (without writing to storage).
     const data = await get(['siteTimers', 'currentTracker']);
     const timers = data.siteTimers || {};
     const tracker = data.currentTracker;
@@ -350,58 +355,14 @@ async function handle(msg) {
     }
     return { siteTimers: timers };
 
-  } else if (action === 'getModes') {
-    const data = await get(['modes', 'activeModeId']);
-    return { modes: data.modes || [], activeModeId: data.activeModeId || null };
-
-  } else if (action === 'setActiveMode') {
-    await set({ activeModeId: msg.modeId || null });
-    await updateTracker();
-    await checkAndRedirectBlockedTabs();
-    return { ok: true };
-
-  } else if (action === 'createMode') {
-    const data = await get(['modes']);
-    const modes = data.modes || [];
-    const colors = ['blue', 'emerald', 'orange', 'purple', 'rose', 'amber', 'teal', 'magenta'];
-    const assignedColor = colors[modes.length % colors.length];
-    const mode = { id: 'mode_' + Date.now(), name: msg.name, builtin: false, domains: [], color: assignedColor };
-    modes.push(mode);
-    await set({ modes });
-    return { ok: true, mode, modes };
-
-  } else if (action === 'deleteMode') {
-    const data = await get(['modes', 'activeModeId']);
-    let modes = (data.modes || []).filter(m => m.id !== msg.modeId);
-    const upd = { modes };
-    if (data.activeModeId === msg.modeId) upd.activeModeId = null;
-    await set(upd);
-    await updateTracker();
-    return { ok: true, modes };
-
-  } else if (action === 'renameMode') {
-    const data = await get(['modes']);
-    const modes = data.modes || [];
-    const idx = modes.findIndex(m => m.id === msg.modeId);
-    if (idx !== -1) { modes[idx].name = msg.name; await set({ modes }); }
-    return { ok: true };
-
-  } else if (action === 'setPassword') {
-    await set({ password: msg.password || '' });
-    return { ok: true };
-
-  } else if (action === 'setModeDomains') {
-    const data = await get(['modes']);
-    const modes = data.modes || [];
-    const idx = modes.findIndex(m => m.id === msg.modeId);
-    if (idx === -1) { return { ok: false }; }
-    modes[idx].domains = (msg.domains || []).map(d =>
+  } else if (action === 'saveBlocklist') {
+    const blocklist = (msg.domains || []).map(d =>
       typeof d === 'string' ? { domain: d, limitMinutes: null } : d
     );
-    await set({ modes });
+    await set({ blocklist });
     await updateTracker();
     await checkAndRedirectBlockedTabs();
-    return { ok: true };
+    return { ok: true, blocklist };
 
   } else if (action === 'savePerpetualBlock') {
     const perpetualBlock = (msg.domains || []).map(d =>
@@ -412,44 +373,32 @@ async function handle(msg) {
     await checkAndRedirectBlockedTabs();
     return { ok: true, perpetualBlock };
 
-  } else if (action === 'setPerpetualSectionEnabled') {
-    const enabled = msg.enabled !== false;
-    await set({ perpetualSectionEnabled: enabled });
+  } else if (action === 'setSchedule') {
+    await set({ schedule: msg.schedule });
     await updateTracker();
     await checkAndRedirectBlockedTabs();
-    return { ok: true, perpetualSectionEnabled: enabled };
+    return { ok: true };
+
+  } else if (action === 'setPassword') {
+    await set({ password: msg.password || '' });
+    return { ok: true };
 
   } else if (action === 'addDomain') {
     const domain = msg.domain;
     if (!domain) { return { ok: false, error: 'Invalid domain' }; }
-    const data = await get(['modes', 'activeModeId', 'globalSchedule', 'scheduleEnabled', 'enabled']);
-    const modes = data.modes || [];
-    
-    // Detect currently active mode taking scheduling into account
-    const activeMode = getActiveMode(data);
-    if (!activeMode) { return { ok: false, error: 'No active mode' }; }
-    
-    const idx = modes.findIndex(m => m.id === activeMode.id);
-    if (idx === -1) { return { ok: false, error: 'No active mode' }; }
-    
-    const alreadyExists = modes[idx].domains.some(e =>
+    const targetListKey = msg.isPerpetual ? 'perpetualBlock' : 'blocklist';
+    const data = await get([targetListKey]);
+    const list = data[targetListKey] || [];
+    const alreadyExists = list.some(e =>
       (typeof e === 'string' ? e : e.domain) === domain
     );
-    if (!alreadyExists) modes[idx].domains.push({ domain, limitMinutes: null });
-    await set({ modes });
-    await updateTracker();
-    await checkAndRedirectBlockedTabs();
-    return { ok: true, domain, mode: modes[idx] };
-
-  } else if (action === 'setGlobalSchedule') {
-    const upd = { scheduleEnabled: msg.enabled, globalSchedule: msg.globalSchedule || {} };
-    if (msg.enabled) {
-      upd.activeModeId = null;
+    if (!alreadyExists) {
+      list.push({ domain, limitMinutes: null });
+      await set({ [targetListKey]: list });
+      await updateTracker();
+      await checkAndRedirectBlockedTabs();
     }
-    await set(upd);
-    await updateTracker();
-    await checkAndRedirectBlockedTabs();
-    return { ok: true };
+    return { ok: true, domain, [targetListKey]: list };
 
   } else if (action === 'saveBlockPage') {
     if (msg.type === 'custom') {
@@ -480,23 +429,15 @@ async function handle(msg) {
 
 // ===== INIT =====
 chrome.runtime.onInstalled.addListener(async () => {
-  const data = await get(['modes']);
-  if (!data.modes) {
+  const data = await get(['blocklist']);
+  if (!data.blocklist) {
     await set({
       enabled: true,
-      modes: [{
-        id: 'builtin-social',
-        name: 'Focus',
-        builtin: true,
-        color: 'blue',
-        domains: []
-      }],
-      activeModeId: 'builtin-social',
-      globalSchedule: {},
-      scheduleEnabled: false,
-      tempUnblocks: {}, siteTimers: {},
+      blocklist: [],
       perpetualBlock: [],
-      perpetualSectionEnabled: false
+      schedule: { enabled: false, start: '09:00', end: '17:00', days: 'weekdays' },
+      tempUnblocks: {},
+      siteTimers: {}
     });
   }
 });

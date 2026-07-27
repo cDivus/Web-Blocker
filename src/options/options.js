@@ -1,7 +1,6 @@
 // ===== MAIN OPTIONS CONTROLLER & ROUTER =====
 import { store, refreshState } from './modules/state.js';
-import { sendMsg } from './modules/utils.js';
-import { renderModes, setupModesListeners, saveActiveBlocklists } from './modules/modes.js';
+import { renderBlocklist, initBlocklistEvents, saveBlocklistFromTextarea } from './modules/blocklist.js';
 import { renderSchedule, setupScheduleListeners } from './modules/schedule.js';
 import { renderBlockPage, setupBlockPageListeners } from './modules/blockpage.js';
 import { renderAnalytics } from './modules/analytics.js';
@@ -35,7 +34,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Setup navigation & all listeners
   setupNav();
-  setupModesListeners();
+  initBlocklistEvents();
   setupScheduleListeners();
   setupBlockPageListeners();
   setupPasswordListeners();
@@ -43,13 +42,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupThemeListeners();
 
   // Render all active components
-  renderModes();
+  renderBlocklist();
   renderSchedule();
   renderBlockPage();
   renderAnalytics();
   renderPasswordSettings();
   renderThemeSettings();
-  
+
   // Visibility change logic to stop/start polling
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
@@ -76,31 +75,22 @@ function setupNav() {
       document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
       btn.classList.add('active');
-      
+
       const sec = document.getElementById('section-' + btn.dataset.section);
       if (sec) sec.classList.add('active');
-      
+
       if (store.analyticsInterval) {
         clearInterval(store.analyticsInterval);
         store.analyticsInterval = null;
       }
-      
+
       if (btn.dataset.section === 'analytics') {
         renderAnalytics();
         store.analyticsInterval = setInterval(renderAnalytics, 1000);
       }
 
-      // Close the open mode editor when switching sections (save changes first)
-      saveActiveBlocklists();
-      store.selectedModeId = null;
-      const editor = document.getElementById('mode-editor');
-      if (editor) editor.style.display = 'none';
-
-      // Also close the new mode inline form if open
-      const newModeForm = document.getElementById('new-mode-form');
-      if (newModeForm) newModeForm.style.display = 'none';
-      const newModeName = document.getElementById('new-mode-name');
-      if (newModeName) newModeName.value = '';
+      // Save blocklist when switching sections
+      saveBlocklistFromTextarea();
     });
   });
 
@@ -115,52 +105,44 @@ function setupNav() {
 // ===== GLOBAL CONTROLS =====
 function setupGlobalListeners() {
   // ---- RESET ALL ----
-  document.getElementById('btn-reset-all').addEventListener('click', async () => {
-    if (!confirm('Reset all settings to defaults?')) return;
-    await chrome.storage.local.clear();
-    await chrome.storage.local.set({
-      enabled: true,
-      modes: [{
-        id: 'builtin-social', name: 'Focus', builtin: true, color: 'blue',
-        domains: []
-      }],
-      activeModeId: 'builtin-social',
-      globalSchedule: {},
-      scheduleEnabled: false,
-      tempUnblocks: {}, siteTimers: {},
-      theme: 'teal',
-      perpetualBlock: [],
-      perpetualSectionEnabled: false
+  const resetBtn = document.getElementById('btn-reset-all');
+  if (resetBtn) {
+    resetBtn.addEventListener('click', async () => {
+      if (!confirm('Reset all settings to defaults?')) return;
+      await chrome.storage.local.clear();
+      await chrome.storage.local.set({
+        enabled: true,
+        blocklist: [],
+        schedule: { enabled: false, start: '09:00', end: '17:00', days: 'weekdays' },
+        tempUnblocks: {},
+        siteTimers: {},
+        theme: 'teal'
+      });
+
+      // Refresh local memory
+      await refreshState();
+
+      // Redraw all components
+      renderBlocklist();
+      renderSchedule();
+      renderBlockPage();
+      renderAnalytics();
+      renderPasswordSettings();
+      await renderThemeSettings();
     });
-    
-    // Refresh local memory
-    await refreshState();
-    store.selectedModeId = null;
-
-    // Redraw all components
-    renderModes();
-    renderSchedule();
-    renderBlockPage();
-    renderAnalytics();
-    renderPasswordSettings();
-    await renderThemeSettings();
-
-    const editor = document.getElementById('mode-editor');
-    if (editor) editor.style.display = 'none';
-  });
+  }
 }
 
 // ===== THEME CONTROLS =====
 async function renderThemeSettings() {
   const data = await chrome.storage.local.get('theme');
   const activeTheme = data.theme || 'teal';
-  
-  // Set attribute on document element
+
   document.documentElement.setAttribute('data-theme', activeTheme);
-  
+
   const btnTeal = document.getElementById('btn-theme-teal');
   const btnMonochrome = document.getElementById('btn-theme-monochrome');
-  
+
   if (btnTeal && btnMonochrome) {
     if (activeTheme === 'teal') {
       btnTeal.classList.add('active');
@@ -175,14 +157,14 @@ async function renderThemeSettings() {
 function setupThemeListeners() {
   const btnTeal = document.getElementById('btn-theme-teal');
   const btnMonochrome = document.getElementById('btn-theme-monochrome');
-  
+
   if (btnTeal) {
     btnTeal.addEventListener('click', async () => {
       await chrome.storage.local.set({ theme: 'teal' });
       await renderThemeSettings();
     });
   }
-  
+
   if (btnMonochrome) {
     btnMonochrome.addEventListener('click', async () => {
       await chrome.storage.local.set({ theme: 'monochrome' });

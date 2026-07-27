@@ -153,32 +153,6 @@ export function getLocalDateString() {
   return `${year}-${month}-${day}`;
 }
 
-/**
- * Returns the currently active mode based on state and schedule.
- * Works with both manual activation and schedule-based activation.
- */
-export function getActiveMode(data, timestamp = Date.now()) {
-  if (data.enabled === false) return null;
-
-  const modes = data.modes || [];
-
-  if (data.scheduleEnabled) {
-    const globalSchedule = data.globalSchedule || {};
-    const d = new Date(timestamp);
-    const key = `${d.getDay()}-${d.getHours()}`;
-    const scheduledModeId = globalSchedule[key];
-    if (scheduledModeId) {
-      return modes.find(m => m.id === scheduledModeId) || null;
-    }
-    return null;
-  }
-
-  if (data.activeModeId) {
-    return modes.find(m => m.id === data.activeModeId) || null;
-  }
-  return null;
-}
-
 export const DEFAULT_QUOTES = [
   { text: "Deep work is not a chore. It is a highly satisfying flow state.", author: "Cal Newport" },
   { text: "Distractions are temporary escapes. Your ambitions are permanent.", author: "Unknown" },
@@ -194,23 +168,6 @@ export const DEFAULT_QUOTES = [
   { text: "The successful warrior is the average man, with laser-like focus.", author: "Bruce Lee" },
   { text: "Freedom is secured not by the fulfilling of men's desires, but by the removal of desire.", author: "Epictetus" }
 ];
-
-/**
- * Counts total sites and timed sites for a domain entry list.
- */
-export function countDomainEntries(domains = []) {
-  let sites = 0;
-  let timed = 0;
-  domains.forEach(e => {
-    if (e && e.domain) {
-      const count = e.domain.split(',').filter(Boolean).length;
-      sites += count;
-      if (e.limitMinutes != null) timed += count;
-    }
-  });
-  const label = `${sites} site${sites !== 1 ? 's' : ''}${timed > 0 ? ` · ${timed} timed` : ''}`;
-  return { sites, timed, label };
-}
 
 /**
  * Compiles and sanitizes custom block page HTML for security.
@@ -264,3 +221,51 @@ export function sanitizeCustomHtml(html, assets = {}) {
 
   return doc.documentElement.outerHTML;
 }
+
+/**
+ * Serialize entries back into textarea text, preserving exact raw lines / newlines.
+ */
+export function serializeEntries(entries) {
+  return (entries || []).map(e => {
+    if (e.rawLine != null) return e.rawLine;
+    if (e.limitMinutes != null) return `${e.domain}; ${e.limitMinutes}`;
+    return e.domain || '';
+  }).join('\n');
+}
+
+/**
+ * Send message to Chrome extension background script with async promise wrapper.
+ */
+export function sendMsg(action, data = {}) {
+  return new Promise(resolve => {
+    chrome.runtime.sendMessage({ action, ...data }, response => {
+      const err = chrome.runtime.lastError;
+      resolve(response);
+    });
+  });
+}
+
+/**
+ * Get MIME type from file extension.
+ */
+export function getMimeType(filename) {
+  const ext = filename.split('.').pop().toLowerCase();
+  switch (ext) {
+    case 'css': return 'text/css';
+    case 'js': return 'application/javascript';
+    case 'png': return 'image/png';
+    case 'jpg':
+    case 'jpeg': return 'image/jpeg';
+    case 'gif': return 'image/gif';
+    case 'svg': return 'image/svg+xml';
+    case 'webp': return 'image/webp';
+    case 'woff': return 'font/woff';
+    case 'woff2': return 'font/woff2';
+    case 'ttf': return 'font/ttf';
+    case 'otf': return 'font/otf';
+    case 'html':
+    case 'htm': return 'text/html';
+    default: return 'application/octet-stream';
+  }
+}
+

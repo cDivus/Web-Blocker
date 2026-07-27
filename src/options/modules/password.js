@@ -1,6 +1,6 @@
 // ===== PASSWORD SETTINGS MODULE =====
 import { store } from './state.js';
-import { sendMsg } from './utils.js';
+import { sendMsg } from '../../common/utils.js';
 
 export function renderPasswordSettings() {
   const setupContainer = document.getElementById('password-setup-container');

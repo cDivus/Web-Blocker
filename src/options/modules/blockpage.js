@@ -1,6 +1,6 @@
 import { store } from './state.js';
-import { sendMsg, getMimeType } from './utils.js';
-import { DEFAULT_QUOTES, sanitizeCustomHtml } from '../../common/utils.js';
+import { sendMsg, sanitizeCustomHtml, getMimeType } from '../../common/utils.js';
+import { DEFAULT_QUOTES } from '../../common/utils.js';
 export function renderBlockPage(skipTextareaUpdate = false, keepError = false) {
   // Load original states
   store.originalBlockPageType = store.state.blockPageType || 'default';
