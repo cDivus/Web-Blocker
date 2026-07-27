@@ -124,24 +124,35 @@ export async function saveBlocklistFromTextarea() {
 }
 
 export function initBlocklistEvents() {
+  let blocklistTimer = null;
+  let perpetualTimer = null;
+
   const textarea = document.getElementById('blocklist-textarea');
   if (textarea) {
-    textarea.addEventListener('input', () => {
-      updateBlocklistStats(textarea.value, 'textarea-error', 'blocklist-stats');
-    });
-    textarea.addEventListener('blur', () => {
-      saveBlocklistFromTextarea();
-    });
+    const scheduleUpdateAndSave = () => {
+      clearTimeout(blocklistTimer);
+      blocklistTimer = setTimeout(() => {
+        updateBlocklistStats(textarea.value, 'textarea-error', 'blocklist-stats');
+        saveBlocklistFromTextarea();
+      }, 400);
+    };
+
+    textarea.addEventListener('input', scheduleUpdateAndSave);
+    textarea.addEventListener('blur', scheduleUpdateAndSave);
   }
 
   const perpetualTextarea = document.getElementById('perpetual-textarea');
   if (perpetualTextarea) {
-    perpetualTextarea.addEventListener('input', () => {
-      updateBlocklistStats(perpetualTextarea.value, 'perpetual-textarea-error', 'perpetual-stats');
-    });
-    perpetualTextarea.addEventListener('blur', () => {
-      saveBlocklistFromTextarea();
-    });
+    const schedulePerpetualUpdateAndSave = () => {
+      clearTimeout(perpetualTimer);
+      perpetualTimer = setTimeout(() => {
+        updateBlocklistStats(perpetualTextarea.value, 'perpetual-textarea-error', 'perpetual-stats');
+        saveBlocklistFromTextarea();
+      }, 400);
+    };
+
+    perpetualTextarea.addEventListener('input', schedulePerpetualUpdateAndSave);
+    perpetualTextarea.addEventListener('blur', schedulePerpetualUpdateAndSave);
   }
 
   // Toggle Perpetual Block Enabled state
