@@ -55,6 +55,14 @@ function isScheduleActive(schedule) {
 }
 
 // ===== BLOCKING LOGIC =====
+function getBlockedRedirectUrl(url, rule) {
+  let redirectUrl = chrome.runtime.getURL('src/blocked/blocked.html') + '?blocked=' + encodeURIComponent(url);
+  if (rule && typeof rule === 'string') {
+    redirectUrl += '&rule=' + encodeURIComponent(rule);
+  }
+  return redirectUrl;
+}
+
 async function shouldBlock(url) {
   const data = await get([
     'enabled', 'blocklist', 'perpetualBlock', 'perpetualEnabled', 'tempUnblocks', 'schedule'
@@ -87,9 +95,9 @@ async function shouldBlock(url) {
         const entry = typeof matchedPerpetual === 'string' ? { domain: matchedPerpetual, limitMinutes: null } : matchedPerpetual;
         if (entry.limitMinutes != null) {
           const usedMs = await getTimerUsage(entry.domain);
-          if (usedMs >= entry.limitMinutes * 60 * 1000) return true;
+          if (usedMs >= entry.limitMinutes * 60 * 1000) return entry.domain;
         } else {
-          return true; // Permanently blocked 24/7!
+          return entry.domain; // Permanently blocked 24/7!
         }
       }
     }
@@ -119,11 +127,11 @@ async function shouldBlock(url) {
   if (entry.limitMinutes != null) {
     const usedMs = await getTimerUsage(entry.domain);
     const limitMs = entry.limitMinutes * 60 * 1000;
-    if (usedMs >= limitMs) return true;
+    if (usedMs >= limitMs) return entry.domain;
     return false;
   }
 
-  return true;
+  return entry.domain;
 }
 
 // ===== NAVIGATION =====
@@ -131,8 +139,9 @@ chrome.webNavigation.onBeforeNavigate.addListener(async ({ tabId, frameId, url }
   if (frameId !== 0) return;
   if (!url || /^(chrome|chrome-extension|moz-extension|about|edge):/.test(url)) return;
 
-  if (await shouldBlock(url)) {
-    chrome.tabs.update(tabId, { url: chrome.runtime.getURL('src/blocked/blocked.html') + '?blocked=' + encodeURIComponent(url) });
+  const matchedRule = await shouldBlock(url);
+  if (matchedRule) {
+    chrome.tabs.update(tabId, { url: getBlockedRedirectUrl(url, matchedRule) });
   }
 });
 
@@ -228,7 +237,7 @@ async function _updateTrackerImpl() {
 
     if (totalUsedMs >= limitMs) {
       await recordTrackerExit(tracker);
-      chrome.tabs.update(tracker.tabId, { url: chrome.runtime.getURL('src/blocked/blocked.html') + '?blocked=' + encodeURIComponent(activeTabUrl) });
+      chrome.tabs.update(tracker.tabId, { url: getBlockedRedirectUrl(activeTabUrl, tracker.domain) });
     } else {
       const remainingTimeMs = limitMs - totalUsedMs;
       await chrome.alarms.create('block_active_tab', { when: now + remainingTimeMs });
@@ -245,7 +254,7 @@ async function _updateTrackerImpl() {
     const limitMs = limitMinutes * 60 * 1000;
 
     if (usedMs >= limitMs) {
-      chrome.tabs.update(activeTabId, { url: chrome.runtime.getURL('src/blocked/blocked.html') + '?blocked=' + encodeURIComponent(activeTabUrl) });
+      chrome.tabs.update(activeTabId, { url: getBlockedRedirectUrl(activeTabUrl, activeDomain) });
     } else {
       const remainingTimeMs = limitMs - usedMs;
       const newTracker = {
@@ -315,8 +324,11 @@ chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
 async function checkAndRedirectBlockedTabs() {
   const tabs = await chrome.tabs.query({});
   for (const t of tabs) {
-    if (t.url && await shouldBlock(t.url)) {
-      chrome.tabs.update(t.id, { url: chrome.runtime.getURL('src/blocked/blocked.html') + '?blocked=' + encodeURIComponent(t.url) });
+    if (t.url) {
+      const matchedRule = await shouldBlock(t.url);
+      if (matchedRule) {
+        chrome.tabs.update(t.id, { url: getBlockedRedirectUrl(t.url, matchedRule) });
+      }
     }
   }
 }

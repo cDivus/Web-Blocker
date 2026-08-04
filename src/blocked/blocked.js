@@ -12,9 +12,10 @@ chrome.storage.onChanged.addListener((changes) => {
   }
 });
 
-// Parse blocked URL from query string
+// Parse blocked URL and rule from query string
 const params = new URLSearchParams(window.location.search);
 const blockedUrl = params.get('blocked') || '';
+const ruleParam = params.get('rule') || '';
 const blockedDomain = blockedUrl ? parseUrl(blockedUrl)?.hostname || blockedUrl : '';
 
 // Load custom block page message or custom ZIP/HTML template
@@ -68,6 +69,16 @@ chrome.storage.local.get(['blockPageContent', 'blockPageType', 'customBlockHtml'
     if (msg) {
       const el = document.getElementById('block-message');
       if (el) el.textContent = msg;
+    }
+  }
+
+  // Display rule passed from background script (or fallback to blocked domain)
+  const displayRule = ruleParam || blockedDomain;
+  if (displayRule) {
+    const ruleEl = document.getElementById('block-rule');
+    if (ruleEl) {
+      ruleEl.textContent = displayRule;
+      ruleEl.style.display = 'block';
     }
   }
 });
