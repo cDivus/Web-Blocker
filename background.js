@@ -135,15 +135,30 @@ async function shouldBlock(url) {
 }
 
 // ===== NAVIGATION =====
-chrome.webNavigation.onBeforeNavigate.addListener(async ({ tabId, frameId, url }) => {
-  if (frameId !== 0) return;
+async function checkAndBlockTab(tabId, url) {
   if (!url || /^(chrome|chrome-extension|moz-extension|about|edge):/.test(url)) return;
 
   const matchedRule = await shouldBlock(url);
   if (matchedRule) {
     chrome.tabs.update(tabId, { url: getBlockedRedirectUrl(url, matchedRule) });
   }
+}
+
+chrome.webNavigation.onBeforeNavigate.addListener(async ({ tabId, frameId, url }) => {
+  if (frameId !== 0) return;
+  await checkAndBlockTab(tabId, url);
 });
+
+chrome.webNavigation.onHistoryStateUpdated.addListener(async ({ tabId, frameId, url }) => {
+  if (frameId !== 0) return;
+  await checkAndBlockTab(tabId, url);
+});
+
+chrome.webNavigation.onReferenceFragmentUpdated.addListener(async ({ tabId, frameId, url }) => {
+  if (frameId !== 0) return;
+  await checkAndBlockTab(tabId, url);
+});
+
 
 let lastPopupActiveTime = 0;
 
