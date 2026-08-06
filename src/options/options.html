@@ -56,7 +56,7 @@
 
         <div class="mode-editor" style="display: block; margin-top: 12px; margin-bottom: 28px;">
           <textarea id="blocklist-textarea" rows="10"
-            placeholder="youtube.com&#10;facebook.com/feed&#10;!mail.google.com&#10;reddit.com; 30&#10;# comment line"></textarea>
+            placeholder="youtube.com&#10;facebook.com/feed&#10;!https://www.reddit.com/r&#10;reddit.com; 30&#10;# comment line"></textarea>
           <div class="textarea-error" id="textarea-error" style="display:none; margin-top: 8px;"></div>
         </div>
 
@@ -216,8 +216,8 @@
                   <td><strong>Keyword Block</strong>: Blocks any URL containing the word "gaming". Works with search URLs.</td>
                 </tr>
                 <tr>
-                  <td><code>!music.youtube.com</code></td>
-                  <td><strong>Allowlist Exception</strong>: Overrides block rules with a <code>!</code> prefix to explicitly allow access.</td>
+                  <td><code>!music.youtube.com</code><br><code>!https://www.reddit.com/r</code></td>
+                  <td><strong>Allowlist Exception</strong>: Overrides block rules with a <code>!</code> prefix to explicitly allow specific subdomains or page subpaths (e.g. block <code>reddit.com</code> but allow <code>!https://www.reddit.com/r</code>).</td>
                 </tr>
                 <tr>
                   <td><code># note or comment</code></td>

@@ -30,7 +30,7 @@ When editing a block mode, you can write blocking rules in several formats. Each
 | `games` | **Keyword Block**: Blocks any website whose hostname contains the keyword "games" (e.g., `coolgames.com`). |
 | `facebook.com, instagram.com; 20` | **Combined Daily Limit**: Combines the daily limit for multiple domains to a shared pool of 20 minutes. |
 | `games; 20` | **Combined Daily Limit with Keyword**: Blocks any website whose hostname contains the keyword "games" (e.g., `coolgames.com`) and combines the daily limit for multiple domains to a shared pool of 20 minutes. |
-| `!music.youtube.com` | **Allowlist Exception**: Bypasses any block rules for `music.youtube.com`. |
+| `!music.youtube.com`<br>`!https://www.reddit.com/r` | **Allowlist Exception**: Bypasses any block rules for specific subdomains or page subpaths (e.g. block `reddit.com` but allow `!https://www.reddit.com/r`). |
 
 
 ## Sample Custom Block Pages
